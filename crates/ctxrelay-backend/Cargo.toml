@@ -1,0 +1,9 @@
+[package]
+name = "ctxrelay-backend"
+version = "0.1.0"
+edition = "2021"
+description = "ctxRelay backend 契约:Backend trait 定义 + TargetSpec/CapPolicy/LoweringReport/LoweredSession/Dest/Manifest。只依赖 ctxrelay-ir。"
+
+[dependencies]
+ctxrelay-ir = { path = "../ctxrelay-ir" }
+serde_json = "1"
