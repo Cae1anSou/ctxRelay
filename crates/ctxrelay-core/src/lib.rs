@@ -4,5 +4,7 @@
 //! crate 里,`ctxrelay-core` 只负责把它们接起来。
 
 pub mod registry;
+pub mod dest;
 
 pub use registry::Registry;
+pub use dest::resolve_claude_code_dest;
