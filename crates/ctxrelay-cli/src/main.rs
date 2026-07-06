@@ -69,7 +69,6 @@ fn run_ir_command(registry: &Registry, input: PathBuf, output: PathBuf) -> Resul
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn run_import_command(
     registry: &Registry,
     input: PathBuf,
