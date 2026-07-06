@@ -21,7 +21,7 @@ impl Acquire for ClaudeShareAcquire {
             SourceRef::File(path) => std::fs::read(&path)
                 .map_err(|e| FrontendError(format!("failed to read {}: {e}", path.display()))),
             SourceRef::Url(url) => Err(FrontendError(format!(
-                "fe-claude-share V1 只支持人工另存为文件(SourceRef::File);\
+                "fe-claude-share V1 只支持人工另存为文件(SourceRef::File); \
                  URL 自动抓取见架构文档 §12 步骤 6,尚未实现。收到的 URL: {url}"
             ))),
         }
