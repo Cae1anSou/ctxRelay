@@ -1,7 +1,8 @@
 use ctxrelay_frontend::{FrontendError, Parse, RawBytes, Result};
-use ctxrelay_ir::{Block, Document, Origin, Role, SourceProvenance, Turn, TurnId};
+use ctxrelay_ir::{Artifact, Block, Document, Origin, Role, SourceProvenance, Turn, TurnId};
 use semver::Version;
 use serde::Deserialize;
+use serde_json::Value;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
@@ -9,6 +10,14 @@ use time::OffsetDateTime;
 /// 只声明我们实际使用的字段——serde 默认忽略未声明的字段,不需要窜改成
 /// `#[serde(deny_unknown_fields)]`,因为快照里还有大量我们不关心的元数据
 /// (snapshot_name / creator / is_public / attachments 等)。
+///
+/// `content` 里每一项先当作不透明的 `serde_json::Value` 读进来,而不是拆成一个
+/// 只声明 `type`/`text` 字段的结构体——否则一旦遇到未识别的 content block
+/// 类型(thinking/tool_use/artifact 等),没被声明的字段会在反序列化阶段就
+/// 被 serde 直接丢弃,归一成 ForeignAction 时就再也拿不回来了,变成"标记
+/// 存在但没有产物"的空壳,违反架构文档 §3.2"一次外部效应 + 一份人类可读
+/// 产物"的承诺。保留原始 `Value` 后,未识别类型的完整 JSON 会原样进
+/// ForeignAction 的 artifact,不丢信息。
 #[derive(Deserialize)]
 struct RawSnapshot {
     chat_messages: Vec<RawMessage>,
@@ -17,17 +26,10 @@ struct RawSnapshot {
 #[derive(Deserialize)]
 struct RawMessage {
     uuid: String,
-    content: Vec<RawContentBlock>,
+    content: Vec<Value>,
     sender: String,
     index: u64,
     created_at: String,
-}
-
-#[derive(Deserialize)]
-struct RawContentBlock {
-    #[serde(rename = "type")]
-    kind: String,
-    text: Option<String>,
 }
 
 /// claude.ai 分享快照的 Parse 实现。纯函数:给定字节,要么吐出合法 `Document`,
@@ -67,22 +69,39 @@ impl Parse for ClaudeShareParse {
 
             let mut blocks = Vec::with_capacity(message.content.len());
             for block in message.content {
-                match block.kind.as_str() {
+                let kind = block
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| FrontendError("content block missing \"type\" field".to_string()))?
+                    .to_string();
+
+                match kind.as_str() {
                     "text" => {
-                        let content = block.text.ok_or_else(|| {
-                            FrontendError(
-                                "content block has type=\"text\" but no \"text\" field".to_string(),
-                            )
-                        })?;
+                        let content = block
+                            .get("text")
+                            .and_then(Value::as_str)
+                            .ok_or_else(|| {
+                                FrontendError(
+                                    "content block has type=\"text\" but no \"text\" field"
+                                        .to_string(),
+                                )
+                            })?
+                            .to_string();
                         blocks.push(Block::Text { content });
                     }
                     other => {
                         // 未识别的 content block 类型(例如未来遇到 thinking/tool_use/artifact):
-                        // 归一成 ForeignAction,不假装认识一个当前样例里没见过的结构。
+                        // 归一成 ForeignAction,不假装认识一个当前样例里没见过的结构,但把
+                        // 完整原始 JSON 保留进 artifact——只标记存在而不携带产物就违反了
+                        // §3.2 的承诺。
+                        let artifact = Artifact {
+                            media: "application/json".to_string(),
+                            content: block.to_string(),
+                        };
                         blocks.push(Block::foreign_action(
                             other.to_string(),
-                            None,
-                            None,
+                            Some(format!("未识别的 content block 类型: {other}")),
+                            Some(artifact),
                             false,
                             false,
                         ));

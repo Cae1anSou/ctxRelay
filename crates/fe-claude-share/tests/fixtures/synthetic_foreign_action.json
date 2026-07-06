@@ -1,0 +1,19 @@
+{
+  "chat_messages": [
+    {
+      "uuid": "test-msg-1",
+      "content": [
+        { "type": "text", "text": "before tool call" },
+        {
+          "type": "tool_use",
+          "id": "tool_1",
+          "name": "web_search",
+          "input": { "query": "rust serde value flatten" }
+        }
+      ],
+      "sender": "assistant",
+      "index": 0,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}
