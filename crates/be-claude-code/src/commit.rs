@@ -43,8 +43,23 @@ pub fn commit(
         buffer.push('\n');
     }
 
-    std::fs::write(&path, &buffer)
-        .map_err(|e| BackendError(format!("failed to write {}: {e}", path.display())))?;
+    // 先写临时文件,再原子 rename 到目标路径——不用直接 `fs::write(&path, ...)`,
+    // 因为那不是原子操作:如果写到一半磁盘写满/进程被杀,会在 `path` 留下一份
+    // 内容不完整的半成品文件。那样的话,下次重试会撞上前面 `path.exists()` 的
+    // 覆盖保护,而那条错误信息说的是"可能已经真实 commit 过",对一份写坏的垃圾
+    // 文件来说是误导性的。`rename` 在同一文件系统内是原子的,要么最终看到的是
+    // 完整内容,要么 `path` 根本不存在,不会有第三种状态。
+    let tmp_path = dest.session_dir.join(format!("{}.jsonl.tmp", lowered.session_id));
+    std::fs::write(&tmp_path, &buffer)
+        .map_err(|e| BackendError(format!("failed to write {}: {e}", tmp_path.display())))?;
+    std::fs::rename(&tmp_path, &path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp_path);
+        BackendError(format!(
+            "failed to move {} into place at {}: {e}",
+            tmp_path.display(),
+            path.display()
+        ))
+    })?;
 
     let sha256 = format!("{:x}", Sha256::digest(buffer.as_bytes()));
 
