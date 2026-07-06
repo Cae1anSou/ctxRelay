@@ -1,4 +1,4 @@
-use ctxrelay_backend::LoweredSession;
+use ctxrelay_backend::{BackendError, LoweredSession};
 use ctxrelay_ir::{Block, Document, Role};
 use serde_json::{json, Value};
 use sha2::Digest;
@@ -69,10 +69,14 @@ pub fn lower(doc: &Document) -> ctxrelay_backend::Result<LoweredSession> {
             .map(|b| json!({ "type": "text", "text": block_to_text(b) }))
             .collect();
 
-        let timestamp = turn
-            .timestamp
-            .map(|t| t.format(&Rfc3339).expect("valid OffsetDateTime always formats"))
-            .unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string());
+        // `OffsetDateTime::format` 在年份超出 -9999..=9999 时会真的返回 Err——罕见但
+        // 不是不可能,既然函数签名已经声明了 Result,这里就该老实传播而不是 panic。
+        let timestamp = match turn.timestamp {
+            Some(t) => t
+                .format(&Rfc3339)
+                .map_err(|e| BackendError(format!("failed to format turn timestamp: {e}")))?,
+            None => "1970-01-01T00:00:00Z".to_string(),
+        };
 
         let parent_uuid = match &previous_uuid {
             Some(p) => Value::String(p.clone()),
