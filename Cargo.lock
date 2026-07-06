@@ -101,6 +101,7 @@ dependencies = [
  "ctxrelay-frontend",
  "ctxrelay-ir",
  "fe-claude-share",
+ "semver",
  "serde_json",
  "sha2",
  "uuid",
