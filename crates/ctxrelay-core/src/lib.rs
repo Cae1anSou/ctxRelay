@@ -5,6 +5,8 @@
 
 pub mod registry;
 pub mod dest;
+pub mod pipeline;
 
 pub use registry::Registry;
 pub use dest::resolve_claude_code_dest;
+pub use pipeline::{run_import, run_ir, CoreError, ImportOptions, Result};
