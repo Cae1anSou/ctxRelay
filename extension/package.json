@@ -1,0 +1,9 @@
+{
+  "name": "ctxrelay-extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ctxRelay 浏览器扩展占位包,后续实现 background service worker",
+  "scripts": {
+    "build": "echo 'TODO: implement extension build' && exit 0"
+  }
+}
