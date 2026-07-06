@@ -7,3 +7,4 @@
 //! `impl Backend` 要等三个子模块都存在后才接线(见 Task 5)。
 
 pub mod legalize;
+pub mod lower;
