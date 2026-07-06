@@ -5,3 +5,5 @@
 //!
 //! 三个子模块(legalize/lower/commit)在后续任务里逐个加入,`ClaudeCodeBackend` 的
 //! `impl Backend` 要等三个子模块都存在后才接线(见 Task 5)。
+
+pub mod legalize;

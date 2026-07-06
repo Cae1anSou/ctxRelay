@@ -11,3 +11,6 @@ serde_json = "1"
 uuid = { version = "1", features = ["v5"] }
 sha2 = "0.10"
 time = { version = "0.3", features = ["formatting", "parsing"] }
+
+[dev-dependencies]
+semver = "1"
