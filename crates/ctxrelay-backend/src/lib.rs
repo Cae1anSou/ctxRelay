@@ -8,6 +8,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use ctxrelay_ir::Document;
+use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
 /// 对**原始**(legalize 之前)IR `Document` 求内容摘要,作为 `Manifest.ir_digest` 的
@@ -22,7 +23,7 @@ pub fn document_digest(doc: &Document) -> String {
 }
 
 /// 目标 CLI 及其版本范围——"某某 backend"不是一个东西,是"某某 vX.Y backend"。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TargetSpec {
     pub tool: String,
     pub version_range: String,
@@ -36,7 +37,7 @@ pub struct CapPolicy {
 }
 
 /// legalize 阶段的报告:丢了什么、转译了什么,呈现给用户做"对理解的可逆性"。
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LoweringReport {
     pub dropped_reasoning: usize,
     pub inlined_foreign_actions: usize,
@@ -66,20 +67,25 @@ pub struct Dest {
 }
 
 /// 一次写盘记录:写了哪个文件、内容的 sha256。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WriteRecord {
     pub path: PathBuf,
     pub sha256: String,
 }
 
-/// commit 的产出:记录写了什么,支撑 `ctxrelay undo`。
-#[derive(Debug, Clone, PartialEq)]
+/// commit 的产出:记录写了什么,支撑 `ctxrelay undo`/`ctxrelay verify`。
+///
+/// `cwd` 是新加的字段(相对于上一份 backend 计划的版本):`verify` 需要知道去哪个
+/// 目录跑 `claude --resume`,`undo` 目前用不到但留着无妨——`Dest.cwd` 本来就有这份
+/// 信息,commit 时顺手记进 Manifest,比让调用方自己再想办法找一遍更省事也更可靠。
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Manifest {
     pub ir_digest: String,
     pub target: TargetSpec,
     pub writes: Vec<WriteRecord>,
     pub created_session_ids: Vec<String>,
     pub report: LoweringReport,
+    pub cwd: PathBuf,
 }
 
 /// Backend 契约共用的错误类型。

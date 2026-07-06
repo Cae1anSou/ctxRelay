@@ -8,3 +8,4 @@ description = "ctxRelay backend 契约:Backend trait 定义 + TargetSpec/CapPoli
 ctxrelay-ir = { path = "../ctxrelay-ir" }
 serde_json = "1"
 sha2 = "0.10"
+serde = { version = "1", features = ["derive"] }

@@ -54,6 +54,7 @@ pub fn commit(
         writes: vec![WriteRecord { path, sha256 }],
         created_session_ids: vec![lowered.session_id],
         report,
+        cwd: dest.cwd.clone(),
     })
 }
 
