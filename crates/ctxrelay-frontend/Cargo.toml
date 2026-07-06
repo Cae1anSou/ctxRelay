@@ -1,0 +1,8 @@
+[package]
+name = "ctxrelay-frontend"
+version = "0.1.0"
+edition = "2021"
+description = "ctxRelay frontend 契约:Acquire/Parse trait 定义。只依赖 ctxrelay-ir,不认识任何具体 frontend。"
+
+[dependencies]
+ctxrelay-ir = { path = "../ctxrelay-ir" }
