@@ -7,8 +7,10 @@ pub mod registry;
 pub mod dest;
 pub mod pipeline;
 pub mod undo;
+pub mod verify;
 
 pub use registry::Registry;
 pub use dest::resolve_claude_code_dest;
 pub use pipeline::{run_import, run_ir, CoreError, ImportOptions, Result};
 pub use undo::{run_undo, UndoAction};
+pub use verify::run_verify;
