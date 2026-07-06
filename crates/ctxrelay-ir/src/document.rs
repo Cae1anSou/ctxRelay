@@ -44,7 +44,7 @@ pub struct Turn {
 }
 
 /// IR 的顶层容器。`ir_version` 是 frontend/backend 独立演进的 ABI 版本号。
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Document {
     pub ir_version: Version,
     pub source: SourceProvenance,
