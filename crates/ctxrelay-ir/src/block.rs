@@ -44,3 +44,26 @@ pub enum Block {
         caps: BlockCaps,
     },
 }
+
+impl Block {
+    /// 唯一推荐的 `ForeignAction` 构造方式:把 §3.2 的契约("ForeignAction 恒不可回放")
+    /// 钉在类型签名里,调用方无法传入 `replayable`,避免手滑构造出违反契约的 IR。
+    pub fn foreign_action(
+        kind: impl Into<String>,
+        summary: Option<String>,
+        artifact: Option<Artifact>,
+        reasoning: bool,
+        verifiable_signature: bool,
+    ) -> Self {
+        Block::ForeignAction {
+            kind: kind.into(),
+            summary,
+            artifact,
+            caps: BlockCaps {
+                reasoning,
+                verifiable_signature,
+                replayable: false,
+            },
+        }
+    }
+}

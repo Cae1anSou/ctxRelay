@@ -17,8 +17,16 @@ fn arb_block() -> impl Strategy<Value = Block> {
         "[\\PC]{0,60}".prop_map(|content| Block::Text { content }),
         (proptest::option::of("[a-z]{1,10}"), "[\\PC]{0,60}")
             .prop_map(|(language, content)| Block::Code { language, content }),
-        ("[a-z_]{3,15}", proptest::option::of("[\\PC]{0,40}"), proptest::option::of(arb_artifact()), arb_caps())
-            .prop_map(|(kind, summary, artifact, caps)| Block::ForeignAction { kind, summary, artifact, caps }),
+        (
+            "[a-z_]{3,15}",
+            proptest::option::of("[\\PC]{0,40}"),
+            proptest::option::of(arb_artifact()),
+            any::<bool>(),
+            any::<bool>(),
+        )
+            .prop_map(|(kind, summary, artifact, reasoning, verifiable_signature)| {
+                Block::foreign_action(kind, summary, artifact, reasoning, verifiable_signature)
+            }),
         ("[\\PC]{0,60}", arb_caps()).prop_map(|(content, caps)| Block::Reasoning { content, caps }),
     ]
 }
@@ -60,5 +68,21 @@ proptest! {
         let json = serde_json::to_string(&doc).expect("serialize");
         let parsed: Document = serde_json::from_str(&json).expect("deserialize");
         prop_assert_eq!(doc, parsed);
+    }
+
+    /// 架构文档 §3.2 契约:ForeignAction 恒不可回放。
+    /// `Block::foreign_action` 不接受 `replayable` 参数,这条测试确认无论
+    /// `reasoning`/`verifiable_signature` 如何组合,构造出的 caps.replayable 恒为 false。
+    #[test]
+    fn foreign_action_is_never_replayable(
+        kind in "[a-z_]{3,15}",
+        reasoning in any::<bool>(),
+        verifiable_signature in any::<bool>(),
+    ) {
+        let block = Block::foreign_action(kind, None, None, reasoning, verifiable_signature);
+        match block {
+            Block::ForeignAction { caps, .. } => prop_assert!(!caps.replayable),
+            other => panic!("expected ForeignAction, got {other:?}"),
+        }
     }
 }
