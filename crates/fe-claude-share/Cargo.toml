@@ -1,0 +1,13 @@
+[package]
+name = "fe-claude-share"
+version = "0.1.0"
+edition = "2021"
+description = "claude.ai 分享快照(chat_snapshots)frontend。V1 仅支持人工另存为文件的 Acquire;URL 自动抓取见架构文档 §12 步骤 6。"
+
+[dependencies]
+ctxrelay-ir = { path = "../ctxrelay-ir" }
+ctxrelay-frontend = { path = "../ctxrelay-frontend" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+semver = "1"
+time = { version = "0.3", features = ["parsing"] }
