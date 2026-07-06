@@ -190,9 +190,11 @@ trait Backend {
 
     fn legalize(&self, doc: &Document) -> (Document, LoweringReport);  // 纯:合法化 + 报告丢弃了什么
     fn lower(&self, doc: &Document) -> Result<LoweredSession>;         // 纯:IR → 目标原生序列(bytes/结构)
-    fn commit(&self, lowered: LoweredSession, dest: &Dest) -> Result<Manifest>; // 唯一副作用
+    fn commit(&self, lowered: LoweredSession, dest: &Dest, report: LoweringReport, ir_digest: String) -> Result<Manifest>; // 唯一副作用
 }
 ```
+
+> **实现落地时的偏离(已在 `ctxrelay-backend`/`be-claude-code` 落地,§12 步骤 3/4)**:`commit` 实际比这里多两个参数——`report`(`legalize` 产出的 `LoweringReport`)和 `ir_digest`(对**原始**、legalize 之前的 `Document` 求的内容摘要)。根因是 `lower(doc) -> LoweredSession` 只拿得到已合法化的 `Document`,天然不知道 legalize 阶段丢弃了什么,也没资格代表原始 IR 的身份——这两份信息只有调用方(持有原始 `Document` 的那一方)知道,必须显式传给 `commit` 才能填出一份诚实的 `Manifest`。
 
 - **legalize** 是 LLVM legalization 的搬运:遇到本目标不合法的 IR 构造,负责丢弃/转译,而不是反过来要求 frontend 预先适配。典型动作:
   - `verifiable_signature: false` 的 `Reasoning` → 丢弃(否则 `400 Invalid signature in thinking block`);
@@ -239,7 +241,7 @@ core 是一个薄 driver + frontend/backend 注册表。CLI 形态(示意):
 ctxrelay import <export-file> --to claude-code --project ./myproj [--dry-run]
 ctxrelay import <export-file> --to codex       --project ./myproj
 ctxrelay undo   <manifest-file>
-ctxrelay verify <manifest-file>          # 冒烟测试:emit → resume → 问暗号
+ctxrelay verify <manifest-file>          # 冒烟测试:resume 一次真实会话,确认这条路没坏
 ctxrelay ir     <export-file> -o thread.ir.json   # 只 parse 出 IR,不 commit
 ```
 
@@ -268,6 +270,8 @@ struct Manifest {
 - **IR 层 property test(不碰任何真实 CLI)**:任意合法 IR 经 `lower → parse` 往返后 **content-effect 守恒**。可 fuzz,不起真进程,快。这是解耦额外送的礼物——中端可独立验证。
 - **Backend conformance suite(LLVM lit 式,端到端)**:`emit → <cli> resume → 问"我们上一件讨论的是什么"`,断言答案命中。这是唯一能抓"静默失败"的手段。
 - **round-trip / 暗号实验**:在 trunk 埋一个随机暗号词,commit → resume → 问模型该词。答对即证明上下文真的到位。fork 隔离测试(问 A 关于 B 的标签,应答"unknown")验证不串味。
+
+**`ctxrelay verify` 和上面的 conformance 测试不是一回事**(实现落地时明确过这条界限,`ctxrelay-core` 的 `verify.rs` 有对应文档注释):conformance 测试自己造内容、自己埋暗号词,所以知道"正确答案"是什么,能断言答对与否;`ctxrelay verify` 面对的是真实用户对话,没有已知的"正确答案"可断言,所以它只是个诚实的冒烟测试——确认 `<cli> resume` 这条路没坏、能正常加载并给出回应,不对回应内容做任何断言。两者都必要,但职责不同:conformance 测试是开发期"这个 backend 没做错"的证据,`verify` 是用户日常"这次 commit 真的能用"的信心检查。
 
 ---
 
