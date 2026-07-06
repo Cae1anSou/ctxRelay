@@ -87,8 +87,23 @@ name = "ctxrelay-backend"
 version = "0.1.0"
 dependencies = [
  "ctxrelay-ir",
+ "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "ctxrelay-core"
+version = "0.1.0"
+dependencies = [
+ "be-claude-code",
+ "ctxrelay-backend",
+ "ctxrelay-frontend",
+ "ctxrelay-ir",
+ "fe-claude-share",
+ "serde_json",
+ "sha2",
+ "uuid",
 ]
 
 [[package]]
@@ -580,6 +595,7 @@ version = "1.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf80a72845275afea99e7f2b434723d3bc7e38470fcd1c7ed39a599c73319a53"
 dependencies = [
+ "getrandom 0.4.3",
  "js-sys",
  "sha1_smol",
  "wasm-bindgen",
