@@ -32,7 +32,7 @@ pub struct LoweringReport {
 }
 
 /// lower 的纯数据产出:目标原生序列,写盘前可缓存、可 diff、可 dry-run。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LoweredSession {
     pub session_id: String,
     pub ir_digest: String,
@@ -59,7 +59,7 @@ pub struct WriteRecord {
 }
 
 /// commit 的产出:记录写了什么,支撑 `ctxrelay undo`。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Manifest {
     pub ir_digest: String,
     pub target: TargetSpec,
