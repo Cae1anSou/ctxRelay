@@ -1,0 +1,13 @@
+[package]
+name = "be-claude-code"
+version = "0.1.0"
+edition = "2021"
+description = "Claude Code backend:把 IR lower 成 ~/.claude/projects/<slug>/*.jsonl 会话记录。"
+
+[dependencies]
+ctxrelay-ir = { path = "../ctxrelay-ir" }
+ctxrelay-backend = { path = "../ctxrelay-backend" }
+serde_json = "1"
+uuid = { version = "1", features = ["v5"] }
+sha2 = "0.10"
+time = { version = "0.3", features = ["formatting", "parsing"] }
