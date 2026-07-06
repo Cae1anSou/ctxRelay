@@ -107,7 +107,7 @@ pub type Result<T> = std::result::Result<T, BackendError>;
 ///   `document_digest` 计算。`lower`/`commit` 都只见得到合法化后的版本,没资格代表
 ///   原始 IR 的身份。
 ///
-/// 调用方必须在调用 `legalize`之前就对原始 `Document` 算好 `ir_digest`,并在拿到
+/// 调用方必须在调用 `legalize` 之前就对原始 `Document` 算好 `ir_digest`,并在拿到
 /// `legalize` 的 `report` 后,把两者一并带到 `commit`。
 pub trait Backend {
     fn target(&self) -> TargetSpec;
