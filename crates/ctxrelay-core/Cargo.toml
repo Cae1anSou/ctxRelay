@@ -1,0 +1,15 @@
+[package]
+name = "ctxrelay-core"
+version = "0.1.0"
+edition = "2021"
+description = "ctxRelay 核心管线:薄 driver + frontend/backend 注册表,串起 import/ir/undo/verify。"
+
+[dependencies]
+ctxrelay-ir = { path = "../ctxrelay-ir" }
+ctxrelay-frontend = { path = "../ctxrelay-frontend" }
+ctxrelay-backend = { path = "../ctxrelay-backend" }
+fe-claude-share = { path = "../fe-claude-share" }
+be-claude-code = { path = "../be-claude-code" }
+serde_json = "1"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
