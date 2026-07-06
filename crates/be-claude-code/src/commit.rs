@@ -4,11 +4,19 @@ use sha2::{Digest, Sha256};
 
 /// 唯一的写盘处。把 `lower` 产出的记录逐条盖上环境信息(sessionId/cwd/gitBranch/
 /// version/userType)再写成 JSONL 文件,产出记录了写了什么的 `Manifest`。
+///
+/// 写入前会拒绝覆盖已存在的会话文件:`session_id` 由文档内容确定性派生,如果同一份
+/// IR 被 commit 两次(误操作重试、或用户已经在 Claude Code 里真实继续过这个会话),
+/// 无条件 `fs::write` 会静默覆盖掉已经存在的、可能包含用户真实后续对话的内容——这
+/// 正是架构文档 §1 点名要避免的"静默失败模式"。调用方如果确实要重新导入,应该先
+/// 显式删除旧文件(或者未来由 core 提供的 `--force`/`undo` 流程处理),不应该由
+/// `commit` 自己悄悄决定。
 pub fn commit(
     lowered: LoweredSession,
     dest: &Dest,
     target: TargetSpec,
     report: LoweringReport,
+    ir_digest: String,
 ) -> Result<Manifest> {
     std::fs::create_dir_all(&dest.session_dir).map_err(|e| {
         BackendError(format!(
@@ -18,6 +26,15 @@ pub fn commit(
     })?;
 
     let path = dest.session_dir.join(format!("{}.jsonl", lowered.session_id));
+
+    if path.exists() {
+        return Err(BackendError(format!(
+            "refusing to overwrite existing session file {}: this import may have already \
+             been committed once, and the file may contain real conversation continued since \
+             then; delete it first if you intend to re-import",
+            path.display()
+        )));
+    }
 
     let mut buffer = String::new();
     for mut line in lowered.lines {
@@ -32,7 +49,7 @@ pub fn commit(
     let sha256 = format!("{:x}", Sha256::digest(buffer.as_bytes()));
 
     Ok(Manifest {
-        ir_digest: lowered.ir_digest,
+        ir_digest,
         target,
         writes: vec![WriteRecord { path, sha256 }],
         created_session_ids: vec![lowered.session_id],

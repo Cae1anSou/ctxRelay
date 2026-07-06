@@ -1,7 +1,6 @@
 use ctxrelay_backend::{BackendError, LoweredSession};
 use ctxrelay_ir::{Block, Document, Role};
 use serde_json::{json, Value};
-use sha2::Digest;
 use time::format_description::well_known::Rfc3339;
 use uuid::Uuid;
 
@@ -15,9 +14,13 @@ fn turn_uuid(turn_id: &str) -> Uuid {
     Uuid::new_v5(&NAMESPACE, turn_id.as_bytes())
 }
 
-/// session_id 和 ir_digest 都从文档内容本身确定性派生,不引入随机数或系统时间——
-/// 这保证同一份 `Document` 无论何时、在哪台机器上 lower,产出完全一致(可缓存、可 diff)。
-fn document_digest(doc: &Document) -> Vec<u8> {
+/// session_id 从(已合法化的)文档内容本身确定性派生,不引入随机数或系统时间——这保证
+/// 同一份 `Document` 无论何时、在哪台机器上 lower,产出完全一致(可缓存、可 diff)。
+///
+/// 注意这不是 `Manifest.ir_digest`:那个字段代表的是原始(legalize 之前)IR 的身份,
+/// 由 `ctxrelay_backend::document_digest` 在调用 `legalize` 之前对原始 `Document`
+/// 单独计算,这里的序列化字节只是 session_id 的派生输入,两者用途不同,不要混淆。
+fn canonical_bytes(doc: &Document) -> Vec<u8> {
     serde_json::to_vec(doc).expect("Document serialization is infallible")
 }
 
@@ -52,9 +55,8 @@ fn block_to_text(block: &Block) -> String {
 /// 字段——那些交给 `commit` 在真正落盘前盖上去,这样 `lower` 才不需要知道任何环境信息,
 /// 保持纯。
 pub fn lower(doc: &Document) -> ctxrelay_backend::Result<LoweredSession> {
-    let digest_bytes = document_digest(doc);
+    let digest_bytes = canonical_bytes(doc);
     let session_id = Uuid::new_v5(&NAMESPACE, &digest_bytes).to_string();
-    let ir_digest = format!("{:x}", sha2::Sha256::digest(&digest_bytes));
 
     let mut lines = Vec::with_capacity(doc.turns.len());
     let mut previous_uuid: Option<String> = None;
@@ -115,5 +117,5 @@ pub fn lower(doc: &Document) -> ctxrelay_backend::Result<LoweredSession> {
         lines.push(line);
     }
 
-    Ok(LoweredSession { session_id, ir_digest, lines })
+    Ok(LoweredSession { session_id, lines })
 }

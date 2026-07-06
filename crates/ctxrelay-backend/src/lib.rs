@@ -8,6 +8,18 @@ use std::fmt;
 use std::path::PathBuf;
 
 use ctxrelay_ir::Document;
+use sha2::Digest;
+
+/// 对**原始**(legalize 之前)IR `Document` 求内容摘要,作为 `Manifest.ir_digest` 的
+/// 唯一权威来源。之所以不在 `lower`/`commit` 内部就地计算,是因为那两步只拿得到
+/// legalize 之后的 `Document`——legalize 会丢 Reasoning、内联 ForeignAction、插入
+/// preamble,对它求哈希对不上任何一份真实落盘的、可 checkin 的原始 IR 文件
+/// (架构文档 §3.4/§8:`ir_digest` 要能回答"这次 commit 到底来自哪份 IR")。调用方
+/// 必须在调 `legalize` 之前,先对原始 `Document` 调这个函数,把结果一路带到 `commit`。
+pub fn document_digest(doc: &Document) -> String {
+    let bytes = serde_json::to_vec(doc).expect("Document serialization is infallible");
+    format!("{:x}", sha2::Sha256::digest(&bytes))
+}
 
 /// 目标 CLI 及其版本范围——"某某 backend"不是一个东西,是"某某 vX.Y backend"。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,10 +44,12 @@ pub struct LoweringReport {
 }
 
 /// lower 的纯数据产出:目标原生序列,写盘前可缓存、可 diff、可 dry-run。
+///
+/// 不含 `ir_digest`——那是对**原始**(legalize 之前)`Document` 的摘要,`lower` 拿到的
+/// 已经是 legalize 之后的版本,没资格代表它。见 `document_digest` 的文档注释。
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoweredSession {
     pub session_id: String,
-    pub ir_digest: String,
     pub lines: Vec<serde_json::Value>,
 }
 
@@ -84,15 +98,27 @@ pub type Result<T> = std::result::Result<T, BackendError>;
 
 /// 一个 CLI 目标的 lowering 契约。
 ///
-/// 与架构文档 §5 的字面签名有一处差异:`commit` 这里多接收一个 `report` 参数——
-/// `legalize` 产出的 `LoweringReport` 需要一路带到最终的 `Manifest` 里,但
-/// `lower(doc) -> LoweredSession` 只接受已合法化的 `Document`,天然拿不到 legalize
-/// 阶段丢弃了什么这份信息(被丢弃的东西已经不在 Document 里了)。调用方需要自己
-/// 持有 legalize 返回的 report,在调用 commit 时一并传入。
+/// 与架构文档 §5 的字面签名有两处差异,都是同一个根因:legalize 之后的 `Document`
+/// 丢失了一些只有调用方(持有原始 `Document` 的那一方)才知道的信息,`commit` 需要
+/// 这些信息才能填出一份诚实的 `Manifest`,所以多接收两个参数:
+/// - `report`:`legalize` 产出的 `LoweringReport`,`lower(doc) -> LoweredSession` 拿到
+///   的已经是合法化后的 `Document`,天然不知道刚才丢了什么。
+/// - `ir_digest`:对**原始** `Document`(调 `legalize` 之前)的内容摘要,用
+///   `document_digest` 计算。`lower`/`commit` 都只见得到合法化后的版本,没资格代表
+///   原始 IR 的身份。
+///
+/// 调用方必须在调用 `legalize`之前就对原始 `Document` 算好 `ir_digest`,并在拿到
+/// `legalize` 的 `report` 后,把两者一并带到 `commit`。
 pub trait Backend {
     fn target(&self) -> TargetSpec;
     fn required_caps(&self) -> CapPolicy;
     fn legalize(&self, doc: &Document) -> (Document, LoweringReport);
     fn lower(&self, doc: &Document) -> Result<LoweredSession>;
-    fn commit(&self, lowered: LoweredSession, dest: &Dest, report: LoweringReport) -> Result<Manifest>;
+    fn commit(
+        &self,
+        lowered: LoweredSession,
+        dest: &Dest,
+        report: LoweringReport,
+        ir_digest: String,
+    ) -> Result<Manifest>;
 }

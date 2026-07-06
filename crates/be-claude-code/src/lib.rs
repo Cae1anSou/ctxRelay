@@ -41,7 +41,13 @@ impl Backend for ClaudeCodeBackend {
         lower::lower(doc)
     }
 
-    fn commit(&self, lowered: LoweredSession, dest: &Dest, report: LoweringReport) -> Result<Manifest> {
-        commit::commit(lowered, dest, self.target(), report)
+    fn commit(
+        &self,
+        lowered: LoweredSession,
+        dest: &Dest,
+        report: LoweringReport,
+        ir_digest: String,
+    ) -> Result<Manifest> {
+        commit::commit(lowered, dest, self.target(), report, ir_digest)
     }
 }

@@ -55,6 +55,7 @@ fn claude_code_can_resume_a_committed_session() {
         }],
     };
 
+    let ir_digest = ctxrelay_backend::document_digest(&doc);
     let (legalized, report) = legalize(&doc);
     let lowered = lower(&legalized).expect("lower should succeed");
     let session_id = lowered.session_id.clone();
@@ -77,6 +78,7 @@ fn claude_code_can_resume_a_committed_session() {
         &dest,
         TargetSpec { tool: "claude-code".to_string(), version_range: ">=2.1.0".to_string() },
         report,
+        ir_digest,
     )
     .expect("commit should succeed");
 

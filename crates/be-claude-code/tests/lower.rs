@@ -65,6 +65,5 @@ fn lower_is_deterministic() {
     let b = lower(&doc).expect("lower should succeed");
 
     assert_eq!(a.session_id, b.session_id);
-    assert_eq!(a.ir_digest, b.ir_digest);
     assert_eq!(a.lines, b.lines);
 }
