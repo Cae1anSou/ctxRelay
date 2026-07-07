@@ -1,6 +1,30 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ctxrelay-bridge-protocol",
-  "description": "PLACEHOLDER: CLI <-> extension job/response schema, 定型见架构文档 §10.1",
-  "type": "object"
+  "description": "CLI(ctxrelay listen)与浏览器扩展(background.ts)之间唯一的契约来源。两侧的类型都应该照着这份 schema 手写/生成,不允许字段名各写各的。",
+  "definitions": {
+    "CaptureRequest": {
+      "description": "扩展 POST 给本地 ctxrelay listen 服务的请求体。",
+      "type": "object",
+      "required": ["version", "token", "conversation_id", "org_id", "snapshot"],
+      "properties": {
+        "version": { "type": "string", "const": "1" },
+        "token": { "type": "string", "description": "ctxrelay listen 启动时打印的一次性 token,用户手动粘贴进扩展设置页配对。" },
+        "conversation_id": { "type": "string" },
+        "org_id": { "type": "string" },
+        "captured_at": { "type": "string", "description": "RFC3339 时间戳,扩展抓取时的本地时间,仅供人读,不参与 IR。" },
+        "snapshot": { "type": "object", "description": "claude.ai chat_conversations 接口的原始 JSON,原样透传给 fe-claude-live::ClaudeLiveParse。" }
+      }
+    },
+    "CaptureResponse": {
+      "description": "ctxrelay listen 处理完一次 CaptureRequest 后的响应体。",
+      "type": "object",
+      "required": ["version", "status"],
+      "properties": {
+        "version": { "type": "string", "const": "1" },
+        "status": { "type": "string", "enum": ["ok", "error"] },
+        "message": { "type": "string" }
+      }
+    }
+  }
 }

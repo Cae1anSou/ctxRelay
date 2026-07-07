@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "ctxRelay CLI:ctxrelay import/ir/undo/verify。"
 
+[lib]
+name = "ctxrelay_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "ctxrelay"
 path = "src/main.rs"
@@ -11,5 +15,6 @@ path = "src/main.rs"
 [dependencies]
 ctxrelay-core = { path = "../ctxrelay-core" }
 ctxrelay-frontend = { path = "../ctxrelay-frontend" }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
