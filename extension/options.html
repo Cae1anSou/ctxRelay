@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <title>ctxRelay 设置</title>
+</head>
+<body>
+  <h1>ctxRelay 设置</h1>
+  <p>先在终端跑 <code>ctxrelay listen --to claude-code --project &lt;你的项目目录&gt;</code>,把它打印出来的 token 粘贴到下面。</p>
+  <label>Token: <input id="token" type="text" size="40" /></label><br />
+  <label>端口(默认 47651): <input id="port" type="number" value="47651" /></label><br />
+  <button id="save">保存</button>
+  <p id="status"></p>
+  <script src="dist/options.js"></script>
+</body>
+</html>

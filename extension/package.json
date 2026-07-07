@@ -1,9 +1,13 @@
 {
   "name": "ctxrelay-extension",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
-  "description": "ctxRelay 浏览器扩展占位包,后续实现 background service worker",
+  "description": "ctxRelay 浏览器扩展:一键把当前打开的 claude.ai 对话(含 thinking)导入本地 ctxrelay。",
   "scripts": {
-    "build": "echo 'TODO: implement extension build' && exit 0"
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/chrome": "^0.0.270"
   }
 }

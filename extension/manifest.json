@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "ctxRelay",
+  "version": "0.1.0",
+  "description": "把当前打开的 claude.ai 对话(含 thinking)一键导入本地 ctxrelay。",
+  "action": {
+    "default_title": "导入到 ctxRelay"
+  },
+  "background": {
+    "service_worker": "dist/background.js"
+  },
+  "options_page": "options.html",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://claude.ai/*", "http://127.0.0.1/*"]
+}
