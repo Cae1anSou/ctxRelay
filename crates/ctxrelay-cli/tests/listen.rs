@@ -75,10 +75,9 @@ fn listen_accepts_one_capture_and_exits() {
         .spawn()
         .expect("failed to spawn ctxrelay listen");
 
-    // 给服务一点时间起来再连。
-    std::thread::sleep(Duration::from_millis(300));
-
-    // 从 stdout 里读出 listen 打印的 token(格式:"token: <uuid>")。
+    // 从 stdout 里读出 listen 打印的 token(格式:"token: <uuid>")——`read_line` 本身
+    // 会阻塞到有数据可读,不需要额外 sleep 等服务起来;真正的连接重试兜底在
+    // `post_capture` 内部的 `connect_with_retry`。
     let stdout = child.stdout.take().unwrap();
     let mut reader = std::io::BufReader::new(stdout);
     let mut first_line = String::new();
@@ -126,8 +125,6 @@ fn listen_rejects_wrong_token() {
         .stderr(Stdio::piped())
         .spawn()
         .expect("failed to spawn ctxrelay listen");
-
-    std::thread::sleep(Duration::from_millis(300));
 
     let (status, _body) = post_capture(47900, "wrong-token", r#"{"version":"1","token":"wrong-token","conversation_id":"x","org_id":"y","snapshot":{}}"#);
     assert_eq!(status, 401);
