@@ -22,8 +22,10 @@ enum Command {
     /// 完整导入:Acquire → Parse → legalize → lower → commit
     Import {
         input: PathBuf,
+        /// 目标 backend 名字,目前只有 "claude-code" 这一个
         #[arg(long)]
         to: String,
+        /// 要写入哪个本地项目目录(决定 ~/.claude/projects/ 下对应哪个会话目录)
         #[arg(long)]
         project: PathBuf,
         #[arg(long)]
@@ -32,6 +34,7 @@ enum Command {
         /// 代为一次性初始化(见 `resolve_claude_code_dest` 的文档注释)
         #[arg(long)]
         bootstrap: bool,
+        /// manifest 输出路径,默认写到 <project>/.ctxrelay/manifests/<session-id>.manifest.json
         #[arg(long)]
         manifest_out: Option<PathBuf>,
     },
@@ -41,12 +44,16 @@ enum Command {
     Verify { manifest: PathBuf },
     /// 起一个一次性本地服务,等浏览器扩展 POST 一次抓取,跑完整个 import 管线后退出
     Listen {
+        /// 目标 backend 名字,目前只有 "claude-code" 这一个
         #[arg(long)]
         to: String,
+        /// 要写入哪个本地项目目录(决定 ~/.claude/projects/ 下对应哪个会话目录)
         #[arg(long)]
         project: PathBuf,
+        /// 本地服务监听的端口,要和浏览器扩展设置页里填的端口一致
         #[arg(long, default_value_t = 47651)]
         port: u16,
+        /// manifest 输出路径,默认写到 <project>/.ctxrelay/manifests/<session-id>.manifest.json
         #[arg(long)]
         manifest_out: Option<PathBuf>,
         /// 目标项目从未在 Claude Code 里打开过时,花一点真实 API 额度让 ctxrelay
