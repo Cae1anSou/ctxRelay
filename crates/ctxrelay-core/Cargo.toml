@@ -9,6 +9,7 @@ ctxrelay-ir = { path = "../ctxrelay-ir" }
 ctxrelay-frontend = { path = "../ctxrelay-frontend" }
 ctxrelay-backend = { path = "../ctxrelay-backend" }
 fe-claude-share = { path = "../fe-claude-share" }
+fe-claude-live = { path = "../fe-claude-live" }
 be-claude-code = { path = "../be-claude-code" }
 serde_json = "1"
 sha2 = "0.10"

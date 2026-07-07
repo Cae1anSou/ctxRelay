@@ -1,6 +1,7 @@
 use be_claude_code::ClaudeCodeBackend;
 use ctxrelay_backend::Backend;
 use ctxrelay_frontend::{Acquire, Parse, SourceRef};
+use fe_claude_live::ClaudeLiveParse;
 use fe_claude_share::{ClaudeShareAcquire, ClaudeShareParse};
 
 /// 薄注册表(架构文档 §7:"core 是一个薄 driver + frontend/backend 注册表")。
@@ -21,7 +22,10 @@ impl Registry {
     pub fn with_defaults() -> Self {
         Registry {
             acquirers: vec![Box::new(ClaudeShareAcquire)],
-            parsers: vec![Box::new(ClaudeShareParse)],
+            // fe-claude-live 只注册 Parse,不注册 Acquire——它没有实现 Acquire trait
+            // (数据来源是浏览器扩展主动 POST,不是 ctxrelay 主动拉取,见
+            // fe-claude-live/src/lib.rs 顶部的文档注释)。
+            parsers: vec![Box::new(ClaudeShareParse), Box::new(ClaudeLiveParse)],
             backends: vec![Box::new(ClaudeCodeBackend)],
         }
     }
