@@ -1,0 +1,207 @@
+{
+  "uuid": "fca79960-3026-40e1-beba-6abb33fe20d5",
+  "name": "科研agent的长期记忆与项目上下文设计",
+  "summary": "**Conversation Overview**\n\nThe person is building a research copilot system—analogous to Claude Code or Codex for programming—designed to function like a semi-autonomous lab member that can survey literature, download and parse papers, maintain long-term memory across sessions, and support project-level context during paper writing. The conversation covered two major architectural discussions: memory system design and tool/MCP boundary design.\n\nOn memory architecture, Claude proposed a layered approach distinguishing raw PDF storage, per-paper structured card extraction, cross-paper synthesis notes, and project-level context. The key principle introduced was that the system should behave like a colleague who has \"digested\" literature rather than a search engine over raw text—with every synthesized claim carrying provenance back to source sections (\"cite or die\"). Claude recommended storing memory in plain text files (Markdown plus YAML metadata, with SQLite for citation graphs and vector indexes as derived artifacts), citing the inspectability and replay-safety benefits and explicitly connecting this to the person's apparent existing research on agent-native architectures and state externalization. Claude also recommended building the system as an MCP server consumable by Claude Code or Codex, and noted that literature consolidation should happen in periodic batch cycles rather than per-message to prevent memory degradation.\n\nIn the second exchange, the person raised a concern about whether wrapping everything as MCP tools would create problematic MCP-nesting, and whether all capabilities should be flattened into a single MCP server. Claude resolved the nesting concern as a category error: MCP is an agent-facing boundary protocol, not an internal composition mechanism, so calling arxiv's HTTP API inside tool implementation code is just a function call, not MCP nesting. The correct structural principle articulated was: one MCP server as the single agent boundary with a small, decision-level tool surface; internal implementation uses layered Python libraries with no MCP involvement. Claude also distinguished two types of context pollution the person should guard against—procedural pollution (mechanical steps leaking into agent context, which the person correctly wanted to avoid) and data pollution (tools returning raw payloads like 50 abstracts directly into context). The recommended pattern was for tools to write results to the memory store as a side effect and return only handles or compact manifests, with the agent requesting detail on demand. Claude also corrected a potential overcorrection in the person's rejection of sub-agents: while autonomous multi-step sub-agents are rightly avoided for mechanical tasks, the per-paper card generation step is irreducibly an LLM task and should be implemented as a constrained single-shot LLM function call (one paper in, one structured card out, no tools, isolated context)—described as \"an executor implemented with an LLM, invoked deterministically by code.\" The final tool surface proposed included roughly eight decision-level tools: `search_literature`, `add_to_reading_list`, `ingest`, `search_memory`, `read_card`, `read_section`, `write_synthesis`, `link`, and `consolidate`. Claude also noted that acquisition-layer scripts could be designed as both MCP tool implementations and standalone CLI commands, giving both human and agent access to the same capabilities while preserving runtime portability.",
+  "model": "claude-opus-4-8",
+  "created_at": "2026-07-04T00:07:36.804338Z",
+  "updated_at": "2026-07-04T15:28:26.769129Z",
+  "settings": {
+    "enabled_web_search": true,
+    "enabled_mcp_tools": {
+      "local:Filesystem:read_file": true,
+      "local:Control Chrome:go_back": true,
+      "local:Control Chrome:open_url": true,
+      "local:Filesystem:search_files": true,
+      "local:Control Chrome:close_tab": true,
+      "local:Control Chrome:list_tabs": true,
+      "local:Filesystem:get_file_info": true,
+      "local:Control Chrome:go_forward": true,
+      "local:Control Chrome:reload_tab": true,
+      "local:Filesystem:directory_tree": true,
+      "local:Filesystem:list_directory": true,
+      "local:Filesystem:read_text_file": true,
+      "local:Control Chrome:switch_to_tab": true,
+      "local:Control Chrome:get_current_tab": true,
+      "local:Filesystem:read_multiple_files": true,
+      "local:Control Chrome:get_page_content": true,
+      "local:Control Chrome:execute_javascript": true,
+      "local:Filesystem:list_allowed_directories": true,
+      "local:Filesystem:list_directory_with_sizes": true,
+      "local:Filesystem:read_file-a64a04fdb932bd7d09313e707c3e1374": true,
+      "local:Control Chrome:go_back-6755e5fd1a9e4afe0153dd0c9e86d985": true,
+      "local:Control Chrome:open_url-ac5bd763ff367de38db57ba12f2a1a8d": true,
+      "local:Filesystem:search_files-4a215056e1a9170626315f61863a5f31": true,
+      "local:Control Chrome:close_tab-ff9678f0fe76db6d079e80403bbcf2af": true,
+      "local:Control Chrome:list_tabs-7e98a4dcb66b5ed3ea35ccd3b657dc8b": true,
+      "local:Filesystem:get_file_info-b9ae43299738ab8caba7a1cb3fa62071": true,
+      "local:Control Chrome:go_forward-bec69b6b3c535c61a5d0939a5a2b935d": true,
+      "local:Control Chrome:reload_tab-72c4a5eaa18f302ec4021fe43d5d93a5": true,
+      "local:Filesystem:directory_tree-0e98634b9031b43460b626d5140a9b48": true,
+      "local:Filesystem:list_directory-5979c57d53c8f6e2a294c58db9f9157a": true,
+      "local:Filesystem:read_text_file-ef740e8abe0cdd34c236f291bb166b14": true,
+      "local:Control Chrome:switch_to_tab-2c182d806993e93e4dbf919b5ba1eede": true,
+      "local:Control Chrome:get_current_tab-62c3d59488e5e8a817918afdb5349db5": true,
+      "local:Filesystem:read_multiple_files-9b5a75409ca98d8a57a70f421b177661": true,
+      "local:Control Chrome:get_page_content-5548f8584d3f2946f0cbad717fc56c38": true,
+      "local:Control Chrome:execute_javascript-26e7618a66f9eaeb098f09bc73ae9669": true,
+      "local:Filesystem:list_allowed_directories-bb006105edb10bc92468491cb2cffe83": true,
+      "local:Filesystem:list_directory_with_sizes-ab2f3f00c34287a51ea064c9d77c103f": true
+    },
+    "enabled_monkeys_in_a_barrel": true,
+    "enabled_saffron": true,
+    "tool_search_mode": "auto",
+    "preview_feature_uses_artifacts": true,
+    "enabled_turmeric": true,
+    "thinking_mode": "auto",
+    "effort_level": "high"
+  },
+  "is_starred": false,
+  "is_temporary": false,
+  "platform": "CLAUDE_AI",
+  "is_wiggle_enabled": true,
+  "effective_thinking_mode": "auto",
+  "current_leaf_message_uuid": "019f2dbc-c314-7bbc-b6c6-b11f84c1ccb1",
+  "chat_messages": [
+    {
+      "uuid": "019f2a73-bc00-7057-a549-98a974fc8677",
+      "text": "",
+      "content": [
+        {
+          "start_timestamp": "2026-07-04T00:07:43.189641Z",
+          "stop_timestamp": "2026-07-04T00:07:43.189641Z",
+          "type": "text",
+          "text": "我想做做一个科研copilot，就像Claude code和codex对于写代码一样。但是我希望我这个项目中agent可能是更半自动的，真的就像是一个课题组的成员一样，可以让他去调研某个领域（他能下载文献，然后融合成长期记忆，或者构建RAG），能给处调研的结果，同时后面在聊其他问题的时间他也能想起来之前看过的某篇文献中提到了什么。在构思论文的时候也能有长期的项目级的上下文。你有什么想法吗",
+          "citations": []
+        }
+      ],
+      "sender": "human",
+      "index": 0,
+      "created_at": "2026-07-04T00:07:43.189767Z",
+      "updated_at": "2026-07-04T00:07:43.189767Z",
+      "input_mode": "text",
+      "truncated": false,
+      "attachments": [],
+      "files": [],
+      "sync_sources": [],
+      "parent_message_uuid": "00000000-0000-4000-8000-000000000000"
+    },
+    {
+      "uuid": "019f2a73-bc06-7cdc-9045-319a5e05f5d3",
+      "text": "",
+      "content": [
+        {
+          "start_timestamp": "2026-07-04T00:07:43.177434Z",
+          "stop_timestamp": "2026-07-04T00:08:03.017612Z",
+          "type": "thinking",
+          "thinking": "Jennifer's looking to build a research copilot that functions like a lab member—handling literature surveys, paper downloads, and maintaining long-term memory across sessions with project-level context for writing. Given her background in agent architecture and systems work, I should focus on substantive architectural decisions rather than surface-level suggestions, especially since she values original thinking and pushback against conventional approaches.\n\nThe real challenge isn't RAG itself—it's memory consolidation. Naive RAG over PDFs just gives you search results, not a colleague who's actually read and formed opinions. A good research memory should be layered: raw PDFs at the bottom, then structured extraction of claims and methods per paper, then synthesized beliefs and notes that cross papers, finally project-specific context on top. Retrieval should hit the synthesized layer first and drill down to raw sources only when needed—like a Zettelkasten approach. Every synthesized claim needs to carry provenance back to its source paper and section, so when the system recalls something, it can point you to where it came from. That's the cite-or-die constraint.\n\nFor the workflow itself, I'm thinking of research as a long-running autonomous task—plan what to search, hit arXiv or Semantic Scholar APIs, fetch and parse PDFs, extract structured cards, deduplicate, follow citation graphs for snowballing, then synthesize into a survey with citations. Build in human checkpoints to approve searches and validate the synthesis before it commits to memory.\n\nThis actually connects perfectly to her agent-native thesis. The memory should live in plain files—markdown notes plus citation metadata—not hidden in a vector database. That makes the agent a colleague whose notes you can actually read and edit. It's inspectable, reversible, and machine-decidable. The tech stack is straightforward: arXiv and OpenAlex APIs, GROBID for parsing, SQLite with embeddings, Python agent runtime, and expose it all as an MCP server so any client can use the memory tools. Actually, the cleanest framing is to build it as an MCP server that Claude Code can point at a research repo. For failure modes, watch out for weak embedding retrieval on academic prose—hybrid BM25 plus dense search helps. Chunking papers badly loses tables and math. And memory consolidation needs to happen periodically like sleep, not per-message, or it'll rot.",
+          "summaries": [
+            {
+              "summary": "思考如何设计具有长期记忆、文献管理和项目级上下文的半自动科研助手系统"
+            },
+            {
+              "summary": "构想半自动研究助手的架构与长期记忆机制。"
+            },
+            {
+              "summary": "架构分层记忆系统，融合混合检索与可审视的智能体笔记。"
+            },
+            {
+              "summary": "架构了分层记忆系统与半自动研究工作流。"
+            }
+          ],
+          "cut_off": false,
+          "truncated": false,
+          "hidden": false
+        },
+        {
+          "start_timestamp": "2026-07-04T00:08:03.017983Z",
+          "stop_timestamp": "2026-07-04T00:08:24.083116Z",
+          "type": "text",
+          "text": "这个想法很好，而且它和你在做的 agent-native 架构研究其实是同一个问题的两面。我先说我认为最核心的一个判断：\n\n**难点不在 RAG，在记忆的\"消化\"。** 朴素做法——把 PDF 切块、embedding、检索——得到的是一个搜索引擎，不是一个课题组成员。真人师兄读完文献后脑子里存的不是原文片段，而是压缩后的结构化判断：\"X 那篇的方法在小样本下不 work\"、\"这个方向 2024 年后基本被 Y 范式取代了\"。所以记忆应该分层：\n\n1. **原始层**：PDF 全文 + 元数据（作者、venue、引用图），只做归档\n2. **卡片层**：每篇文献读完后 agent 生成结构化笔记——核心 claim、方法、实验设置、局限、和其他文献的关系，每条都带回原文的 section 级引用\n3. **综合层**：跨文献的 survey 式笔记、领域地图、以及\"我们项目的立场\"（哪些结论我们采信、哪些存疑）\n4. **项目层**：你自己的研究线索、论文大纲、和文献层的双向链接\n\n检索时先命中卡片层和综合层，必要时才下钻到原文。\"后来聊天时想起某篇文献说过什么\"这个能力，本质是综合层的每个 claim 都强制携带 provenance——cite or die。没有引用链的记忆等于谣言。\n\n**一个我觉得值得坚持的架构选择：记忆用纯文本文件，不用黑盒向量库。** Markdown 笔记 + YAML 元数据 + citation graph 存 SQLite，向量索引只是文件之上的派生物、可随时重建。理由有三：人可以直接读和改 agent 的笔记（这才是\"同事\"——你能翻他的笔记本）；这天然满足你论文里的 state externalization 和 replay-safety 约束，整个项目可以直接当你 agent-nativeness 论文的 case study；Claude Code 的成功很大程度就来自 file-based context（CLAUDE.md），这是已被验证的模式。\n\n**调研流程做成半自动的长任务**，人在两个 checkpoint 介入：\n\n- Plan：agent 用 OpenAlex / Semantic Scholar API 检索 + 引用滚雪球，产出候选阅读清单 → **你审批**\n- Deep read：批量下载、GROBID 或 marker 解析 PDF、逐篇生成卡片、去重合并\n- Synthesize：写带引用的调研报告 → **你审阅并标注哪些结论采信**，标注结果写回综合层\n\n最后一个实现上的建议：别一上来做完整 app。把记忆系统做成一个 MCP server（工具如 `search_notes`、`read_paper_card`、`consolidate`、`add_to_reading_list`），调研 pipeline 做成几个 skill/脚本，然后直接用 Claude Code 指向这个研究仓库跑。这样 agent runtime 是现成的，你只写领域层——而且这个\"能力层通过 MCP 暴露\"的结构，正好复用你之前教育管理系统那套四层架构的思路。\n\n两个坑提前说：学术文本的纯 dense 检索效果一般，要 BM25 + embedding 混合，且表格和公式在切块时最容易丢；记忆整合（consolidation）应该周期性批量做（像睡眠），而不是每轮对话都写记忆，否则综合层会迅速腐烂成流水账。\n\n你想先从哪块动手——记忆 schema 的设计，还是调研 pipeline？",
+          "citations": []
+        }
+      ],
+      "sender": "assistant",
+      "index": 1,
+      "created_at": "2026-07-04T00:08:24.124289Z",
+      "updated_at": "2026-07-04T00:08:24.124289Z",
+      "input_mode": "text",
+      "truncated": false,
+      "stop_reason": "end_turn",
+      "attachments": [],
+      "files": [],
+      "sync_sources": [],
+      "parent_message_uuid": "019f2a73-bc00-7057-a549-98a974fc8677"
+    },
+    {
+      "uuid": "019f2dbc-c314-7727-8c85-0aac8cb516a6",
+      "text": "",
+      "content": [
+        {
+          "start_timestamp": "2026-07-04T15:26:13.725444Z",
+          "stop_timestamp": "2026-07-04T15:26:13.725444Z",
+          "type": "text",
+          "text": "我觉得我需要给这个Agent装很多手，比如说把arxiv的搜索封装成一个工具，Agent仅仅需要输入关键词我们就能返回一个嵌套的数据结构包括所有的相关的论文和摘要等；比如我们可能需要一个工具，让Agent能输入论文的title或者url，然后我们直接下载到某个地方，然后生成你上面说的5层内容等等等等，总之，我觉得这种边缘化的功能不应该让Agent自己去做，不应该污染主Agent的上下文，也最好不要让SubAgent去做，而仅仅封装成一个Skill，这样不够稳定而且可能没有必要。考虑到你之前说可以考虑做成一个MCP让Claude Code或者Codex来调用，这样的话不是MCP套MCP了吗？我们应该将我提到的所有功能都扁平化到一个MCP中吗？",
+          "citations": []
+        }
+      ],
+      "sender": "human",
+      "index": 2,
+      "created_at": "2026-07-04T15:26:13.725674Z",
+      "updated_at": "2026-07-04T15:26:13.725674Z",
+      "truncated": false,
+      "attachments": [],
+      "files": [],
+      "sync_sources": [],
+      "parent_message_uuid": "019f2a73-bc06-7cdc-9045-319a5e05f5d3"
+    },
+    {
+      "uuid": "019f2dbc-c314-7bbc-b6c6-b11f84c1ccb1",
+      "text": "",
+      "content": [
+        {
+          "start_timestamp": "2026-07-04T15:26:13.719402Z",
+          "stop_timestamp": "2026-07-04T15:27:50.361902Z",
+          "type": "thinking",
+          "thinking": "I'm recognizing this is a nuanced architectural question about agent-native research tools, and Jennifer's looking for something beyond standard answers—she wants critical thinking on the real tradeoffs between MCP and CLI approaches, controller/executor patterns, and how to classify effects properly.\n\nShe's pushing back on the idea of using Skills or sub-agents for these peripheral, deterministic functions like arxiv search or content downloading, because they'd pollute the main agent's context or introduce unnecessary instability. But now she's questioning whether wrapping them as MCP tools creates a nested problem—MCP calling MCP—if Claude Code or Codex is the one invoking them.\n\nI think the real issue she's surfacing is architectural: should all these deterministic capabilities be flattened into a single MCP server, or is there a cleaner way to decompose them? This is a solid question about how to structure agent-native systems, and the \"nesting\" concern might actually be a category error worth unpacking—MCP is just a protocol for exposing tools, not the only way for code to compose functionality internally. There's a real tension here between hiding procedural complexity and avoiding data bloat in the agent's context. The key is distinguishing between two types of pollution: procedural (the mechanics of fetching and parsing) should stay hidden in tool code, but data pollution (dumping 50 abstracts into context) needs a different solution — tools should write results to a persistent store and return only summaries or references, letting the agent request details on demand. This keeps the context focused on decisions rather than raw payloads.\n\nThat said, the acquisition tools (arxiv search, PDF download) and memory tools (ingest, consolidate) aren't cleanly separable if acquisition tools are supposed to side-effect into the store. The resolution is to keep one coherent MCP server as the agent boundary with a flat tool surface, where operations like `ingest_paper(url)` are memory-coupled at the interface level but use stateless libraries internally.\n\nNow I'm thinking through what the actual agent-facing tools should be — not mechanical steps, but the decisions the agent makes. So I'd have something like `search_literature()` that returns a compact manifest and writes full results to the store, `ingest()` to download and parse papers into cards, `search_memory()` for hybrid search over the card store, and tools to read details on demand or write synthesis notes. The key is keeping the tool surface small and decision-oriented rather than exposing every internal helper.\n\nThere's a nuance about where LLMs fit in this pipeline. She was right to push back against sub-agents for mechanical tasks — deterministic code is better. But the per-paper card generation is genuinely an LLM task, not something you can code deterministically. So `ingest()` internally calls code to download and parse, then makes a scoped LLM call to generate the structured card from that paper. The distinction matters: a full sub-agent with autonomy and tools is unstable and unnecessary, but a constrained single-shot LLM function call — one paper in, one card out, no tools, fresh isolated context — is exactly the right pattern here.\n\nOn the broader architecture question, there's also a choice about whether the copilot needs to be an MCP server at all versus just a repo with scripts and CLI commands that Claude Code invokes via bash. MCP gives you typed, discoverable, runtime-agnostic tools that work across Codex and future apps. CLI-as-tools is simpler and more transparent — the agent sees the commands, humans can run them too — but it couples you to bash and is less structured. Given her research background in MCP-versus-CLI tradeoffs, this framing might resonate: for a research copilot that needs to work in multiple runtimes eventually, MCP as the capability boundary is more durable.\n\nOne concrete thing to flag: the arxiv tool returning nested data structures with all related papers and abstracts directly to the agent is data pollution. Better to have it return a manifest or store the results, keeping the agent's context clean. And on the sub-agents point — the card-generator is an executor implemented with an LLM, invoked deterministically by code, not a controller making its own decisions. That distinction matters for how you think about nesting. The key insight is that MCP is a protocol boundary between your code and the LLM controller—not an internal composition mechanism. When you call arxiv via HTTP inside `download_paper`, that's just a function call, not MCP nesting. You only get actual nesting if you insist on wrapping a third-party arxiv MCP server and consuming it from your own code, which is pure ceremony. **MCP exists to expose capabilities to the LLM when the LLM needs autonomous control over when and how to invoke them.** Inside your pipeline, your code makes the decisions, not the LLM, so internal helpers stay internal.",
+          "summaries": [
+            {
+              "summary": "思考如何将Agent工具功能扁平化整合到单个MCP中"
+            },
+            {
+              "summary": "权衡MCP架构与工具扁平化的设计取舍。"
+            },
+            {
+              "summary": "架构化设计Agent工具接口与MCP服务边界。"
+            },
+            {
+              "summary": "权衡单一MCP扁平化与工具决策导向的架构设计。"
+            },
+            {
+              "summary": "解构了MCP架构边界与工具扁平化的设计权衡。"
+            }
+          ],
+          "cut_off": false,
+          "truncated": false,
+          "hidden": false
+        },
+        {
+          "start_timestamp": "2026-07-04T15:27:50.364665Z",
+          "stop_timestamp": "2026-07-04T15:28:26.719766Z",
+          "type": "text",
+          "text": "先把那个\"MCP 套 MCP\"的顾虑拆掉，因为它其实是个范畴混淆——澄清之后问题会自己消解。\n\n**MCP 是暴露给 agent runtime 的边界协议，不是你自己代码内部的组合方式。** arxiv 就是个 HTTP API，你在 `ingest_paper` 的实现里用 httpx 直接调它——那不叫 MCP，那只是函数调用。真正的嵌套只有在你**坚持去消费一个第三方 arxiv MCP server** 时才会出现，而你完全没必要那样做:把一个定义良好的 REST API 包成 MCP、再从自己代码里当客户端调回来,是纯粹的仪式性开销,还平白多一层进程和失败模式。\n\n所以给你一条可以一直用下去的判据:**只在\"一个 LLM 需要自主决定何时、如何调用某能力\"的地方才伸手去拿 MCP;其余一切都是库和函数调用。** 在你的调研 pipeline 内部,做决定的是你的代码,不是 LLM——所以那里没有 MCP 的位置。用你自己的语言说:MCP tool 是**暴露给 controller(LLM) 的 executor 表面**,而 arxiv 检索、PDF 解析、去重这些是 executor 的内部实现。你不会把 executor 的内部 helper 暴露成 tool,就像你不会把一个类的私有方法放进公有 API。\n\n于是\"是否扁平化到一个 MCP\"这个问题有了一个不对称的答案:**协议表面要收敛成一个 server、且 tool 数量要少(决策级,不是步骤级);但实现不要扁平,内部保持分层库。** 两个反模式正好在两端——把每个 helper 都暴露成 tool(表面过度扁平,agent 面对 30 个工具无从下手),或者拆成多个 MCP server 再让它们互相调用(你担心的那种假嵌套)。正确形态是:一个 server 作为唯一的 agent 边界,内部是 acquisition 层(无状态抓取器)→ parsing 层 → memory 层,纯 Python 包、函数调用组合。\n\n---\n\n不过我要在这里**改你一个设计**,因为它藏着一个你没区分开的东西。你说 arxiv 工具\"返回一个嵌套结构包括所有相关论文和摘要\"——这恰恰是另一种上下文污染,而且比你想防的那种更隐蔽。区分一下:\n\n- **过程污染**:做事的机械步骤(翻页、重试、调 GROBID)。这个藏进确定性代码里就对了,你的直觉没错。\n- **数据污染**:工具吐回的原始结果(50 篇摘要、一篇全文)。如果 `search(\"keyword\")` 把 47 篇摘要糊进 agent 上下文,主 agent 一样会被淹掉。\n\n解法是让工具**以副作用写入记忆库、只返回句柄**,而不是当纯函数把数据吐回来。`search_literature` 应该把 47 篇结果落进 reading-list #12,返回的是\"找到 47 篇,已写入清单 #12,按相关度 top-5 是 [几个 id + 一行标题]\"。agent 需要细节时再 `read_card(id)` 按需下钻。这就是 file-as-context-offload:上下文里只留*任务和判断*,数据活在文件里。这条也直接兑现你论文里的 state externalization——工具的产物是库中的持久 artifact,不是对话里的临时 payload。\n\n---\n\n再补一个你\"不用 SubAgent\"判断上的**必要修正**。对机械工作,你完全对——确定性代码严格优于 LLM 去下载 PDF。但 pipeline 里有**一步不可约地是 LLM**:读一篇论文、产出你要的那张结构化卡片(核心 claim、方法、局限、与他文关系),这不是确定性的。关键区分:\n\n- **SubAgent**(自主、多轮、带工具、行为不可预测)——这个你排除得对。\n- **把 LLM 当纯函数用**(一篇论文进、一张结构化卡片出,无工具、无自主、单次调用)——这个恰恰是对的,而且**因为它跑在自己全新的上下文里,天然对主 agent 零污染**。\n\n所以 `ingest` 内部是:确定性下载/解析(代码)→ 一次受约束的 LLM 调用生成卡片(caged pure function)→ 确定性写库。那个读论文的 LLM 是\"碰巧用 LLM 实现的 executor\",由代码确定性地调用,不是 controller。别因为排斥 SubAgent 而过度矫正成\"整条 pipeline 都是确定性代码\"——阅读那一步骗不过去。\n\n---\n\n落到可动手的 tool 表面,大概就这么几个决策级工具,注意每个都返回句柄/清单而非数据:\n\n`search_literature(query, filters)` · `add_to_reading_list(ids)` · `ingest(ids | url)` · `search_memory(query)`(卡片层+综合层混合检索,BM25+dense)· `read_card(id)` / `read_section(paper_id, section)` · `write_synthesis(...)` · `link(from, to, relation)`(claim/引用图)· `consolidate()`。\n\n最后一个选择留给你,因为它正踩在你 MCP-vs-CLI 的兴趣上:acquisition 那几个无状态脚本,你可以让它们既是 MCP tool 的实现、**又是能在终端里手跑的 CLI**。这样人和 agent 共用同一套命令(你能亲手翻同事的工具箱),同时对 Codex 那种非 bash-first 的 runtime 又有 MCP 的类型化边界。纯 CLI-as-tool 更透明但绑定 bash runtime;MCP 更可移植但多一层结构——两者在 acquisition 层可以不二选一。真正必须是 MCP 的,只有 memory 那几个跨会话有状态、需要 runtime 无关的工具。\n\n你想让我把 memory 库和 acquisition 库的分层接口先草拟出来,还是先定 `ingest` 那步里卡片生成的 LLM 契约(输入切片策略 + 输出 schema)?后者是整个系统质量的咽喉,前者是骨架。",
+          "citations": []
+        }
+      ],
+      "sender": "assistant",
+      "index": 3,
+      "created_at": "2026-07-04T15:28:26.769129Z",
+      "updated_at": "2026-07-04T15:28:26.769129Z",
+      "truncated": false,
+      "stop_reason": "end_turn",
+      "attachments": [],
+      "files": [],
+      "sync_sources": [],
+      "parent_message_uuid": "019f2dbc-c314-7727-8c85-0aac8cb516a6"
+    }
+  ]
+}
