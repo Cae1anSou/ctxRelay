@@ -39,7 +39,11 @@ pub struct CapPolicy {
 /// legalize 阶段的报告:丢了什么、转译了什么,呈现给用户做"对理解的可逆性"。
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LoweringReport {
-    pub dropped_reasoning: usize,
+    /// 没有可信签名、因而无法写成目标原生 thinking block 的 Reasoning——内容没有
+    /// 丢弃,而是内联成普通 Text(见 `be-claude-code::legalize` 的文档注释),这里
+    /// 只是记录"有多少条经历了这次降级",呼应架构文档 §3.2"一次外部效应 + 一份
+    /// 人类可读产物"的承诺:降级不等于销毁。
+    pub inlined_reasoning: usize,
     pub inlined_foreign_actions: usize,
     pub notes: Vec<String>,
 }

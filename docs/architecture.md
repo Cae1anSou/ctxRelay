@@ -197,7 +197,7 @@ trait Backend {
 > **实现落地时的偏离(已在 `ctxrelay-backend`/`be-claude-code` 落地,§12 步骤 3/4)**:`commit` 实际比这里多两个参数——`report`(`legalize` 产出的 `LoweringReport`)和 `ir_digest`(对**原始**、legalize 之前的 `Document` 求的内容摘要)。根因是 `lower(doc) -> LoweredSession` 只拿得到已合法化的 `Document`,天然不知道 legalize 阶段丢弃了什么,也没资格代表原始 IR 的身份——这两份信息只有调用方(持有原始 `Document` 的那一方)知道,必须显式传给 `commit` 才能填出一份诚实的 `Manifest`。
 
 - **legalize** 是 LLVM legalization 的搬运:遇到本目标不合法的 IR 构造,负责丢弃/转译,而不是反过来要求 frontend 预先适配。典型动作:
-  - `verifiable_signature: false` 的 `Reasoning` → 丢弃(否则 `400 Invalid signature in thinking block`);
+  - `verifiable_signature: false` 的 `Reasoning` → 内联成 `Text`(否则强行写成 thinking block 会触发 `400 Invalid signature in thinking block`;但内容本身不销毁,跟 `ForeignAction` 一样降级保留);
   - `ForeignAction` → 内联成 `Text`/`Code`(内容一字不丢,只剥掉工具外壳);
   - 根据 `origin` 合成一段 preamble(personality migration):"以下为从 Web 对话导入的讨论,工具调用已内联为文本,从此处继续"。`origin` 是**描述性**读取,不驱动 IR 内部逻辑。
 - **lower/commit 分离**:lower 纯、可缓存、可 diff;commit 是唯一写盘处。这带来 dry-run、可逆、可测。

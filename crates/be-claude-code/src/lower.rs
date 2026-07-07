@@ -42,7 +42,7 @@ fn block_to_text(block: &Block) -> String {
             Some(lang) => format!("```{lang}\n{content}\n```"),
             None => format!("```\n{content}\n```"),
         },
-        // legalize 已经把 Reasoning 丢弃、ForeignAction 内联成 Text,lower 不应该再见到
+        // legalize 已经把 Reasoning/ForeignAction 都内联成 Text,lower 不应该再见到
         // 它们;如果真的见到了,说明调用方跳过了 legalize,这是编程错误而不是数据问题,
         // 直接 panic 比静默生成一个内容缺失的会话更安全。
         other => panic!("lower() received un-legalized block: {other:?}"),

@@ -47,6 +47,6 @@ ctxrelay verify ./my-project/.ctxrelay/manifests/<session-id>.manifest.json
 
 `fe-claude-share`(目前唯一的 frontend)只支持从本地文件解析(`ctxrelay ir`/`import` 后面跟的是文件路径),还不支持直接传一个 claude.ai 分享链接自动抓取——这需要一个浏览器扩展配合本地桥接,尚未实现。另外,claude.ai 的分享快照本身(不是 ctxRelay 的问题)不包含附件文件,也不包含 MCP 工具调用的原始返回数据,只暴露最终的对话文本;如果你的对话大量依赖附件或 MCP,分享快照从定义上就丢了这部分内容,导入结果会如实反映这一点,不会假装完整。
 
-推理链(thinking)目前一律不会被带到 Claude Code 里——不是因为看不上它,而是 IR 现在没有字段能装下真实的 thinking signature 字节,而没有合法签名的 thinking block 会直接触发 Claude API 的报错,所以宁可丢弃也不硬塞一个假签名进去。
+推理链(thinking)目前不会被写成 Claude Code 真正的 thinking block——IR 现在没有字段能装下真实的 thinking signature 字节,而没有合法签名的 thinking block 会直接触发 Claude API 的报错。但内容不会丢:会被内联成普通文本(加 `[Thinking]` 前缀),你仍然能在会话里看到当时的思考过程,只是失去了"这是一段思考"的结构化身份。
 
 `ctxrelay import` 只在目标 backend 是 `claude-code` 时能自动发现该写到 `~/.claude/projects/` 下的哪个目录;这套发现逻辑目前是为 Claude Code 的目录规则量身定做的,还没有支持第二个 backend(比如 Codex)。

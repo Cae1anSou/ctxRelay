@@ -58,11 +58,11 @@ fn sample_document() -> Document {
 }
 
 #[test]
-fn drops_reasoning_and_inlines_foreign_action() {
+fn inlines_reasoning_and_foreign_action_as_text() {
     let doc = sample_document();
     let (legalized, report) = legalize(&doc);
 
-    assert_eq!(report.dropped_reasoning, 1);
+    assert_eq!(report.inlined_reasoning, 1);
     assert_eq!(report.inlined_foreign_actions, 1);
 
     // turns[0] 是合成的 preamble,原始两轮各自往后挪一位
@@ -80,15 +80,22 @@ fn drops_reasoning_and_inlines_foreign_action() {
     }
 
     assert_eq!(legalized.turns[2].id, TurnId("t2".to_string()));
-    assert_eq!(legalized.turns[2].blocks.len(), 2);
+    assert_eq!(legalized.turns[2].blocks.len(), 3);
     match &legalized.turns[2].blocks[0] {
+        Block::Text { content } => {
+            assert!(content.contains("[Thinking]"));
+            assert!(content.contains("内部推理过程"));
+        }
+        other => panic!("expected inlined Reasoning as Text, got {other:?}"),
+    }
+    match &legalized.turns[2].blocks[1] {
         Block::Text { content } => {
             assert!(content.contains("web_search"));
             assert!(content.contains("rust uuid v5"));
         }
         other => panic!("expected inlined ForeignAction as Text, got {other:?}"),
     }
-    match &legalized.turns[2].blocks[1] {
+    match &legalized.turns[2].blocks[2] {
         Block::Text { content } => assert_eq!(content, "根据搜索结果..."),
         other => panic!("expected Text block, got {other:?}"),
     }

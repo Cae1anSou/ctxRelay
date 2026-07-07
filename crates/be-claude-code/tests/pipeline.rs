@@ -64,7 +64,7 @@ fn sample_document() -> Document {
 /// 离线串联 legalize → lower → commit 三段式,不碰真实 `claude` CLI,不花钱,随
 /// `cargo test --workspace` 正常跑。验证的是"接线对不对"这件事:
 /// - `legalize` 产出的 `LoweringReport` 真的原样出现在最终 `Manifest.report` 里
-///   (不是巧合地被 `Default` 值糊弄过去——这份文档确实有 1 条 Reasoning 被丢、
+///   (不是巧合地被 `Default` 值糊弄过去——这份文档确实有 1 条 Reasoning 被内联、
 ///   1 条 ForeignAction 被内联,如果穿线逻辑被改坏,这两个计数会变成 0)。
 /// - `Manifest.ir_digest` 等于对**原始**(legalize 之前)`Document` 算出的摘要,
 ///   不是对 legalize 之后的版本算的(两者内容不同,算出来的哈希必然不同,足以
@@ -75,7 +75,7 @@ fn legalize_lower_commit_thread_report_and_ir_digest_correctly() {
     let ir_digest = document_digest(&doc);
 
     let (legalized, report) = legalize(&doc);
-    assert_eq!(report.dropped_reasoning, 1);
+    assert_eq!(report.inlined_reasoning, 1);
     assert_eq!(report.inlined_foreign_actions, 1);
 
     let lowered = lower(&legalized).expect("lower should succeed");
