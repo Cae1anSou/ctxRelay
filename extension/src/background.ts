@@ -55,7 +55,17 @@ async function captureAndSend(tabId: number, tabUrl: string): Promise<void> {
     return;
   }
 
-  const found = await findSnapshotAndOrg(conversationId);
+  // 整个抓取阶段(拿组织列表、拿对话内容)包进 try/catch——不只是最后一步 POST。
+  // `res.ok` 只覆盖"服务器返回了非 2xx",覆盖不了网络本身抛异常的情况(比如
+  // 断网、DNS 失败),那种异常如果不接住会变成 service worker 里一个没人处理的
+  // rejection,用户在图标上什么反馈都看不到,跟"什么都没做"没法区分。
+  let found: { snapshot: unknown; orgId: string } | null;
+  try {
+    found = await findSnapshotAndOrg(conversationId);
+  } catch {
+    await chrome.action.setBadgeText({ text: "ERR", tabId });
+    return;
+  }
   if (!found) {
     await chrome.action.setBadgeText({ text: "ERR", tabId });
     return;
