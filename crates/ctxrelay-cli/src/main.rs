@@ -28,6 +28,8 @@ enum Command {
         project: PathBuf,
         #[arg(long)]
         dry_run: bool,
+        /// 目标项目从未在 Claude Code 里打开过时,花一点真实 API 额度让 ctxrelay
+        /// 代为一次性初始化(见 `resolve_claude_code_dest` 的文档注释)
         #[arg(long)]
         bootstrap: bool,
         #[arg(long)]
