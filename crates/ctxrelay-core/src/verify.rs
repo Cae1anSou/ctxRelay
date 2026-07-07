@@ -18,8 +18,12 @@ pub type Result<T> = std::result::Result<T, VerifyError>;
 
 /// 读 manifest——这是 `run_verify` 里唯一能离线测试的部分,不涉及任何真实 CLI 调用。
 pub fn load_manifest(manifest_path: &Path) -> Result<Manifest> {
-    let raw = std::fs::read_to_string(manifest_path)
-        .map_err(|e| VerifyError(format!("failed to read manifest {}: {e}", manifest_path.display())))?;
+    let raw = std::fs::read_to_string(manifest_path).map_err(|e| {
+        VerifyError(format!(
+            "failed to read manifest {}: {e}",
+            manifest_path.display()
+        ))
+    })?;
     serde_json::from_str(&raw).map_err(|e| VerifyError(format!("invalid manifest JSON: {e}")))
 }
 
@@ -46,8 +50,11 @@ pub fn run_verify(manifest_path: &Path) -> Result<String> {
         .map_err(|e| VerifyError(format!("failed to run claude CLI: {e}")))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let parsed: serde_json::Value = serde_json::from_str(&stdout)
-        .map_err(|e| VerifyError(format!("expected JSON output from claude, got error {e}: {stdout}")))?;
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).map_err(|e| {
+        VerifyError(format!(
+            "expected JSON output from claude, got error {e}: {stdout}"
+        ))
+    })?;
     parsed["result"]
         .as_str()
         .map(|s| s.to_string())

@@ -20,7 +20,10 @@ pub type Result<T> = std::result::Result<T, DestError>;
 /// (架构文档 §5 明确警告过更复杂的编码规则不应该被反向工程)。这里只把它当"这个
 /// 项目是不是已经在 Claude Code 里开过"的探测手段,不是唯一真相来源。
 fn candidate_slug(canonical_project_dir: &Path) -> String {
-    canonical_project_dir.display().to_string().replace('/', "-")
+    canonical_project_dir
+        .display()
+        .to_string()
+        .replace('/', "-")
 }
 
 /// 解析 Claude Code backend 的 `Dest`。
@@ -42,9 +45,12 @@ pub fn resolve_claude_code_dest(
     cli_version: &str,
     allow_bootstrap: bool,
 ) -> Result<Dest> {
-    let canonical = project_dir
-        .canonicalize()
-        .map_err(|e| DestError(format!("project dir {} does not exist: {e}", project_dir.display())))?;
+    let canonical = project_dir.canonicalize().map_err(|e| {
+        DestError(format!(
+            "project dir {} does not exist: {e}",
+            project_dir.display()
+        ))
+    })?;
 
     let slug = candidate_slug(&canonical);
     let session_dir = projects_root.join(&slug);
@@ -84,7 +90,9 @@ fn bootstrap_project_dir(canonical_project_dir: &Path, expected_session_dir: &Pa
         .map_err(|e| DestError(format!("failed to run claude CLI for bootstrap: {e}")))?;
 
     if !status.success() {
-        return Err(DestError(format!("bootstrap claude invocation exited with status {status}")));
+        return Err(DestError(format!(
+            "bootstrap claude invocation exited with status {status}"
+        )));
     }
 
     if !expected_session_dir.is_dir() {

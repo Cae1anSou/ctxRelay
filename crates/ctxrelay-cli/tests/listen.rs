@@ -39,8 +39,15 @@ fn post_capture(port: u16, token: &str, body: &str) -> (u16, String) {
     stream.read_to_string(&mut response).unwrap();
 
     let status_line = response.lines().next().unwrap_or("");
-    let status_code: u16 = status_line.split_whitespace().nth(1).and_then(|s| s.parse().ok()).unwrap_or(0);
-    let body_start = response.find("\r\n\r\n").map(|i| i + 4).unwrap_or(response.len());
+    let status_code: u16 = status_line
+        .split_whitespace()
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let body_start = response
+        .find("\r\n\r\n")
+        .map(|i| i + 4)
+        .unwrap_or(response.len());
     (status_code, response[body_start..].to_string())
 }
 
@@ -88,7 +95,9 @@ fn listen_accepts_one_capture_and_exits() {
         .map(|s| s.trim().to_string())
         .expect("listen should print a token line");
 
-    let snapshot = std::fs::read_to_string("../fe-claude-live/tests/fixtures/sample_live_conversation.json").unwrap();
+    let snapshot =
+        std::fs::read_to_string("../fe-claude-live/tests/fixtures/sample_live_conversation.json")
+            .unwrap();
     let capture_request = format!(
         r#"{{"version":"1","token":"{token}","conversation_id":"fca79960-3026-40e1-beba-6abb33fe20d5","org_id":"ed9a9a3c-9d81-43a0-b974-3aa686e20a87","snapshot":{snapshot}}}"#
     );
@@ -98,7 +107,9 @@ fn listen_accepts_one_capture_and_exits() {
     assert_eq!(status, 200, "response body: {body}");
     assert!(body.contains("\"status\":\"ok\""), "response body: {body}");
 
-    let exit_status = child.wait().expect("listen process should exit after one capture");
+    let exit_status = child
+        .wait()
+        .expect("listen process should exit after one capture");
     assert!(exit_status.success());
 
     assert!(manifest_path.exists());
@@ -126,7 +137,11 @@ fn listen_rejects_wrong_token() {
         .spawn()
         .expect("failed to spawn ctxrelay listen");
 
-    let (status, _body) = post_capture(47900, "wrong-token", r#"{"version":"1","token":"wrong-token","conversation_id":"x","org_id":"y","snapshot":{}}"#);
+    let (status, _body) = post_capture(
+        47900,
+        "wrong-token",
+        r#"{"version":"1","token":"wrong-token","conversation_id":"x","org_id":"y","snapshot":{}}"#,
+    );
     assert_eq!(status, 401);
 
     child.kill().ok();

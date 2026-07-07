@@ -5,7 +5,9 @@ use std::path::PathBuf;
 #[test]
 fn accepts_file_but_not_url() {
     let acquire = ClaudeShareAcquire;
-    assert!(acquire.accepts(&SourceRef::File(PathBuf::from("tests/fixtures/sample_snapshot.json"))));
+    assert!(acquire.accepts(&SourceRef::File(PathBuf::from(
+        "tests/fixtures/sample_snapshot.json"
+    ))));
     assert!(!acquire.accepts(&SourceRef::Url("https://claude.ai/share/xyz".to_string())));
 }
 
@@ -15,7 +17,9 @@ fn reads_bytes_from_file() {
     let path = PathBuf::from("tests/fixtures/sample_snapshot.json");
     let expected = std::fs::read(&path).expect("fixture must exist");
 
-    let raw = acquire.acquire(SourceRef::File(path)).expect("should read fixture file");
+    let raw = acquire
+        .acquire(SourceRef::File(path))
+        .expect("should read fixture file");
 
     assert_eq!(raw, expected);
 }

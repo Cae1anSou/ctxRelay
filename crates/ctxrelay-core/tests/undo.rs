@@ -15,7 +15,10 @@ fn write_file_and_record(path: PathBuf, content: &str) -> WriteRecord {
 fn sample_manifest(writes: Vec<WriteRecord>) -> Manifest {
     Manifest {
         ir_digest: "deadbeef".to_string(),
-        target: TargetSpec { tool: "claude-code".to_string(), version_range: ">=2.1.0".to_string() },
+        target: TargetSpec {
+            tool: "claude-code".to_string(),
+            version_range: ">=2.1.0".to_string(),
+        },
         writes,
         created_session_ids: vec!["session-1".to_string()],
         report: LoweringReport::default(),
@@ -73,7 +76,10 @@ fn skips_file_that_is_already_missing() {
     std::fs::create_dir_all(&scratch).unwrap();
 
     let path = scratch.join("never-existed.jsonl");
-    let record = WriteRecord { path: path.clone(), sha256: "irrelevant".to_string() };
+    let record = WriteRecord {
+        path: path.clone(),
+        sha256: "irrelevant".to_string(),
+    };
     let manifest = sample_manifest(vec![record]);
     let manifest_path = scratch.join("manifest.json");
     std::fs::write(&manifest_path, serde_json::to_string(&manifest).unwrap()).unwrap();
@@ -116,7 +122,10 @@ fn undoes_a_manifest_produced_by_a_real_run_import() {
 
     let manifest = run_import(&registry, source, opts).expect("import should succeed");
     let written_path = manifest.writes[0].path.clone();
-    assert!(written_path.exists(), "import should have really written the session file");
+    assert!(
+        written_path.exists(),
+        "import should have really written the session file"
+    );
 
     let manifest_path = project_dir.join("manifest.json");
     std::fs::write(&manifest_path, serde_json::to_string(&manifest).unwrap()).unwrap();
@@ -124,7 +133,10 @@ fn undoes_a_manifest_produced_by_a_real_run_import() {
     let actions = run_undo(&manifest_path).expect("undo should succeed");
 
     assert_eq!(actions, vec![UndoAction::Deleted(written_path.clone())]);
-    assert!(!written_path.exists(), "undo should have deleted the file import really wrote");
+    assert!(
+        !written_path.exists(),
+        "undo should have deleted the file import really wrote"
+    );
 
     std::fs::remove_dir_all(&project_dir).ok();
     std::fs::remove_dir_all(&projects_root).ok();

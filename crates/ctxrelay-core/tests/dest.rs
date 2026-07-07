@@ -80,7 +80,9 @@ fn bootstraps_session_dir_when_missing_and_allowed() {
         .map(|e| e.unwrap().file_name())
         .collect();
     assert!(
-        !entries.iter().any(|name| name.to_string_lossy().ends_with(".jsonl")),
+        !entries
+            .iter()
+            .any(|name| name.to_string_lossy().ends_with(".jsonl")),
         "bootstrap should not leave its throwaway session file behind, found: {entries:?}"
     );
 

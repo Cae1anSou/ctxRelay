@@ -27,8 +27,12 @@ pub enum UndoAction {
 /// commit 时记录的那个——不等就说明文件在 commit 之后被改过(比如用户真的在
 /// Claude Code 里继续聊过),这时候拒绝删除,而不是不由分说地清掉用户的真实数据。
 pub fn run_undo(manifest_path: &Path) -> Result<Vec<UndoAction>> {
-    let raw = std::fs::read_to_string(manifest_path)
-        .map_err(|e| UndoError(format!("failed to read manifest {}: {e}", manifest_path.display())))?;
+    let raw = std::fs::read_to_string(manifest_path).map_err(|e| {
+        UndoError(format!(
+            "failed to read manifest {}: {e}",
+            manifest_path.display()
+        ))
+    })?;
     let manifest: Manifest =
         serde_json::from_str(&raw).map_err(|e| UndoError(format!("invalid manifest JSON: {e}")))?;
 

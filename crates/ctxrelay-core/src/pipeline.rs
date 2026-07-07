@@ -25,10 +25,15 @@ pub fn run_ir(registry: &Registry, source: SourceRef) -> Result<Document> {
     let acquire = registry
         .find_acquire(&source)
         .ok_or_else(|| CoreError("no registered frontend accepts this source".to_string()))?;
-    let raw = acquire.acquire(source).map_err(|e| CoreError(e.to_string()))?;
-    let parse = registry
-        .find_parse(acquire.id())
-        .ok_or_else(|| CoreError(format!("no Parse registered for frontend id {:?}", acquire.id())))?;
+    let raw = acquire
+        .acquire(source)
+        .map_err(|e| CoreError(e.to_string()))?;
+    let parse = registry.find_parse(acquire.id()).ok_or_else(|| {
+        CoreError(format!(
+            "no Parse registered for frontend id {:?}",
+            acquire.id()
+        ))
+    })?;
     parse.parse(raw).map_err(|e| CoreError(e.to_string()))
 }
 
@@ -66,9 +71,11 @@ pub fn run_import_from_bytes(
     frontend_id: &str,
     opts: ImportOptions,
 ) -> Result<Manifest> {
-    let parse = registry
-        .find_parse(frontend_id)
-        .ok_or_else(|| CoreError(format!("no Parse registered for frontend id {frontend_id:?}")))?;
+    let parse = registry.find_parse(frontend_id).ok_or_else(|| {
+        CoreError(format!(
+            "no Parse registered for frontend id {frontend_id:?}"
+        ))
+    })?;
     let doc = parse.parse(raw).map_err(|e| CoreError(e.to_string()))?;
     commit_document(registry, doc, opts)
 }
@@ -76,12 +83,17 @@ pub fn run_import_from_bytes(
 fn commit_document(registry: &Registry, doc: Document, opts: ImportOptions) -> Result<Manifest> {
     let ir_digest = document_digest(&doc);
 
-    let backend = registry
-        .find_backend(&opts.backend_name)
-        .ok_or_else(|| CoreError(format!("no backend registered with name {:?}", opts.backend_name)))?;
+    let backend = registry.find_backend(&opts.backend_name).ok_or_else(|| {
+        CoreError(format!(
+            "no backend registered with name {:?}",
+            opts.backend_name
+        ))
+    })?;
 
     let (legalized, report) = backend.legalize(&doc);
-    let lowered = backend.lower(&legalized).map_err(|e| CoreError(e.to_string()))?;
+    let lowered = backend
+        .lower(&legalized)
+        .map_err(|e| CoreError(e.to_string()))?;
 
     if opts.dry_run {
         return Ok(Manifest {

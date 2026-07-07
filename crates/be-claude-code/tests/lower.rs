@@ -19,7 +19,9 @@ fn legalized_document() -> Document {
                     model: None,
                     surface: "claude.ai".to_string(),
                 },
-                blocks: vec![Block::Text { content: "暗号是紫色的长颈鹿".to_string() }],
+                blocks: vec![Block::Text {
+                    content: "暗号是紫色的长颈鹿".to_string(),
+                }],
                 timestamp: None,
             },
             Turn {
@@ -30,7 +32,9 @@ fn legalized_document() -> Document {
                     model: Some("claude-sonnet-5".to_string()),
                     surface: "claude.ai".to_string(),
                 },
-                blocks: vec![Block::Text { content: "记住了。".to_string() }],
+                blocks: vec![Block::Text {
+                    content: "记住了。".to_string(),
+                }],
                 timestamp: None,
             },
         ],

@@ -5,10 +5,12 @@ use semver::Version;
 
 #[test]
 fn parses_real_authenticated_conversation_with_thinking() {
-    let raw = std::fs::read("tests/fixtures/sample_live_conversation.json")
-        .expect("fixture must exist");
+    let raw =
+        std::fs::read("tests/fixtures/sample_live_conversation.json").expect("fixture must exist");
 
-    let doc = ClaudeLiveParse.parse(raw).expect("should parse real live conversation");
+    let doc = ClaudeLiveParse
+        .parse(raw)
+        .expect("should parse real live conversation");
 
     assert_eq!(doc.ir_version, Version::new(0, 1, 0));
     assert_eq!(doc.source.vendor, "anthropic");
@@ -24,14 +26,21 @@ fn parses_real_authenticated_conversation_with_thinking() {
     }
 
     assert_eq!(doc.turns[1].role, Role::Assistant);
-    assert_eq!(doc.turns[1].origin.model, Some("claude-opus-4-8".to_string()));
+    assert_eq!(
+        doc.turns[1].origin.model,
+        Some("claude-opus-4-8".to_string())
+    );
     assert_eq!(doc.turns[1].blocks.len(), 2);
     match &doc.turns[1].blocks[0] {
         Block::Reasoning { content, caps } => {
             assert!(content.starts_with("Jennifer's looking to build"));
             assert_eq!(
                 *caps,
-                BlockCaps { reasoning: true, verifiable_signature: false, replayable: false }
+                BlockCaps {
+                    reasoning: true,
+                    verifiable_signature: false,
+                    replayable: false
+                }
             );
         }
         other => panic!("expected Reasoning block, got {other:?}"),
@@ -41,7 +50,10 @@ fn parses_real_authenticated_conversation_with_thinking() {
         other => panic!("expected Text block, got {other:?}"),
     }
 
-    assert_eq!(doc.turns[3].id, TurnId("019f2dbc-c314-7bbc-b6c6-b11f84c1ccb1".to_string()));
+    assert_eq!(
+        doc.turns[3].id,
+        TurnId("019f2dbc-c314-7bbc-b6c6-b11f84c1ccb1".to_string())
+    );
 }
 
 /// 回归测试:`current_leaf_message_uuid` 之外的"孤儿"分支(比如用户重新生成过
@@ -81,7 +93,9 @@ fn excludes_abandoned_branches_not_reachable_from_current_leaf() {
     }
     "#;
 
-    let doc = ClaudeLiveParse.parse(raw.as_bytes().to_vec()).expect("should parse branched conversation");
+    let doc = ClaudeLiveParse
+        .parse(raw.as_bytes().to_vec())
+        .expect("should parse branched conversation");
 
     assert_eq!(doc.turns.len(), 2, "abandoned branch t2b must be excluded");
     assert_eq!(doc.turns[0].id, TurnId("t1".to_string()));
@@ -116,16 +130,25 @@ fn foreign_action_preserves_raw_content_for_unrecognized_block_type() {
     }
     "#;
 
-    let doc = ClaudeLiveParse.parse(raw.as_bytes().to_vec()).expect("should parse conversation with tool_use");
+    let doc = ClaudeLiveParse
+        .parse(raw.as_bytes().to_vec())
+        .expect("should parse conversation with tool_use");
 
     assert_eq!(doc.turns.len(), 1);
     assert_eq!(doc.turns[0].blocks.len(), 2);
 
     match &doc.turns[0].blocks[1] {
-        Block::ForeignAction { kind, artifact, caps, .. } => {
+        Block::ForeignAction {
+            kind,
+            artifact,
+            caps,
+            ..
+        } => {
             assert_eq!(kind, "tool_use");
             assert!(!caps.replayable);
-            let artifact = artifact.as_ref().expect("artifact should be present, not a hollow shell");
+            let artifact = artifact
+                .as_ref()
+                .expect("artifact should be present, not a hollow shell");
             assert!(artifact.content.contains("web_search"));
             assert!(artifact.content.contains("rust hashmap"));
         }

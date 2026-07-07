@@ -22,7 +22,9 @@ fn legalized_document() -> Document {
                 model: None,
                 surface: "claude.ai".to_string(),
             },
-            blocks: vec![Block::Text { content: "hello".to_string() }],
+            blocks: vec![Block::Text {
+                content: "hello".to_string(),
+            }],
             timestamp: None,
         }],
     }
@@ -49,7 +51,10 @@ fn writes_jsonl_file_and_manifest() {
     let manifest = commit(
         lowered,
         &dest,
-        TargetSpec { tool: "claude-code".to_string(), version_range: ">=2.1.0".to_string() },
+        TargetSpec {
+            tool: "claude-code".to_string(),
+            version_range: ">=2.1.0".to_string(),
+        },
         LoweringReport::default(),
         ir_digest.clone(),
     )
@@ -91,7 +96,10 @@ fn refuses_to_overwrite_existing_session_file() {
         git_branch: Some("main".to_string()),
         cli_version: "2.1.201".to_string(),
     };
-    let target = TargetSpec { tool: "claude-code".to_string(), version_range: ">=2.1.0".to_string() };
+    let target = TargetSpec {
+        tool: "claude-code".to_string(),
+        version_range: ">=2.1.0".to_string(),
+    };
     let ir_digest = ctxrelay_backend::document_digest(&doc);
 
     // 第一次 commit 应该成功。
@@ -115,7 +123,10 @@ fn refuses_to_overwrite_existing_session_file() {
         ir_digest,
     );
 
-    assert!(second.is_err(), "second commit to the same session file should be refused");
+    assert!(
+        second.is_err(),
+        "second commit to the same session file should be refused"
+    );
 
     std::fs::remove_dir_all(&scratch).ok();
 }

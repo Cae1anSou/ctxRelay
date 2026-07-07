@@ -35,10 +35,17 @@ pub fn legalize(doc: &Document) -> (Document, LoweringReport) {
                              but no code path writes real thinking blocks yet"
                         );
                     }
-                    blocks.push(Block::Text { content: format!("[Thinking]\n{content}") });
+                    blocks.push(Block::Text {
+                        content: format!("[Thinking]\n{content}"),
+                    });
                     report.inlined_reasoning += 1;
                 }
-                Block::ForeignAction { kind, summary, artifact, .. } => {
+                Block::ForeignAction {
+                    kind,
+                    summary,
+                    artifact,
+                    ..
+                } => {
                     let mut text = format!("[外部操作: {kind}]");
                     if let Some(summary) = summary {
                         text.push('\n');

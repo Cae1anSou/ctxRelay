@@ -22,8 +22,15 @@ fn ir_subcommand_writes_ir_json_from_real_fixture() {
     assert!(output_path.exists());
 
     let content = std::fs::read_to_string(&output_path).expect("output file should exist");
-    let parsed: serde_json::Value = serde_json::from_str(&content).expect("output should be valid JSON");
-    assert_eq!(parsed["turns"].as_array().expect("turns should be an array").len(), 4);
+    let parsed: serde_json::Value =
+        serde_json::from_str(&content).expect("output should be valid JSON");
+    assert_eq!(
+        parsed["turns"]
+            .as_array()
+            .expect("turns should be an array")
+            .len(),
+        4
+    );
 
     std::fs::remove_file(&output_path).ok();
 }
@@ -39,7 +46,9 @@ fn import_then_verify_round_trip_through_the_real_binary() {
     let project_dir = std::env::temp_dir().join("ctxrelay-cli-e2e-project");
     let _ = std::fs::remove_dir_all(&project_dir);
     std::fs::create_dir_all(&project_dir).expect("create scratch project dir");
-    let project_dir = project_dir.canonicalize().expect("canonicalize scratch project dir");
+    let project_dir = project_dir
+        .canonicalize()
+        .expect("canonicalize scratch project dir");
 
     let home = std::env::var("HOME").expect("HOME must be set");
     let slug = project_dir.display().to_string().replace('/', "-");

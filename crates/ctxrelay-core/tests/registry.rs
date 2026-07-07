@@ -7,10 +7,14 @@ fn finds_fe_claude_share_for_file_source() {
     let registry = Registry::with_defaults();
     let source = SourceRef::File(PathBuf::from("does-not-need-to-exist.json"));
 
-    let acquire = registry.find_acquire(&source).expect("should find an Acquire for File source");
+    let acquire = registry
+        .find_acquire(&source)
+        .expect("should find an Acquire for File source");
     assert_eq!(acquire.id(), "fe-claude-share");
 
-    let parse = registry.find_parse(acquire.id()).expect("should find matching Parse");
+    let parse = registry
+        .find_parse(acquire.id())
+        .expect("should find matching Parse");
     assert_eq!(parse.id(), "fe-claude-share");
 }
 
@@ -26,7 +30,9 @@ fn does_not_find_acquire_for_url_source() {
 #[test]
 fn finds_claude_code_backend_by_name() {
     let registry = Registry::with_defaults();
-    let backend = registry.find_backend("claude-code").expect("should find claude-code backend");
+    let backend = registry
+        .find_backend("claude-code")
+        .expect("should find claude-code backend");
     assert_eq!(backend.target().tool, "claude-code");
 }
 

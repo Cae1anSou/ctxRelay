@@ -1,5 +1,5 @@
-use ctxrelay_ir::{Block, Role, TurnId};
 use ctxrelay_frontend::Parse;
+use ctxrelay_ir::{Block, Role, TurnId};
 use fe_claude_share::ClaudeShareParse;
 use semver::Version;
 
@@ -7,7 +7,9 @@ use semver::Version;
 fn parses_real_claude_share_snapshot() {
     let raw = std::fs::read("tests/fixtures/sample_snapshot.json").expect("fixture must exist");
 
-    let doc = ClaudeShareParse.parse(raw).expect("should parse real snapshot");
+    let doc = ClaudeShareParse
+        .parse(raw)
+        .expect("should parse real snapshot");
 
     assert_eq!(doc.ir_version, Version::new(0, 1, 0));
     assert_eq!(doc.source.vendor, "anthropic");
@@ -16,7 +18,10 @@ fn parses_real_claude_share_snapshot() {
 
     assert_eq!(doc.turns.len(), 4);
 
-    assert_eq!(doc.turns[0].id, TurnId("019f2a73-bc00-7057-a549-98a974fc8677".to_string()));
+    assert_eq!(
+        doc.turns[0].id,
+        TurnId("019f2a73-bc00-7057-a549-98a974fc8677".to_string())
+    );
     assert_eq!(doc.turns[0].role, Role::User);
     assert_eq!(doc.turns[0].origin.vendor, "anthropic");
     assert_eq!(doc.turns[0].origin.surface, "claude.ai");
@@ -41,10 +46,12 @@ fn parses_real_claude_share_snapshot() {
 /// 完整原始 JSON 必须原样保留在 artifact 里,不能变成一个只剩 kind 标签的空壳。
 #[test]
 fn foreign_action_preserves_raw_content_for_unrecognized_block_type() {
-    let raw = std::fs::read("tests/fixtures/synthetic_foreign_action.json")
-        .expect("fixture must exist");
+    let raw =
+        std::fs::read("tests/fixtures/synthetic_foreign_action.json").expect("fixture must exist");
 
-    let doc = ClaudeShareParse.parse(raw).expect("should parse synthetic snapshot");
+    let doc = ClaudeShareParse
+        .parse(raw)
+        .expect("should parse synthetic snapshot");
 
     assert_eq!(doc.turns.len(), 1);
     assert_eq!(doc.turns[0].blocks.len(), 2);
@@ -55,10 +62,17 @@ fn foreign_action_preserves_raw_content_for_unrecognized_block_type() {
     }
 
     match &doc.turns[0].blocks[1] {
-        Block::ForeignAction { kind, artifact, caps, .. } => {
+        Block::ForeignAction {
+            kind,
+            artifact,
+            caps,
+            ..
+        } => {
             assert_eq!(kind, "tool_use");
             assert!(!caps.replayable);
-            let artifact = artifact.as_ref().expect("artifact should be present, not a hollow shell");
+            let artifact = artifact
+                .as_ref()
+                .expect("artifact should be present, not a hollow shell");
             assert!(artifact.content.contains("web_search"));
             assert!(artifact.content.contains("rust serde value flatten"));
         }

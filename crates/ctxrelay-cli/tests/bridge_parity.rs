@@ -25,7 +25,9 @@ fn capture_request_required_fields_appear_in_both_rust_and_typescript() {
         .expect("extension/src/background.ts must exist");
 
     for field in required {
-        let field_name = field.as_str().expect("required field entries must be strings");
+        let field_name = field
+            .as_str()
+            .expect("required field entries must be strings");
         assert!(
             rust_source.contains(field_name),
             "schema.json requires {field_name:?} but it's missing from crates/ctxrelay-cli/src/bridge.rs \

@@ -1,5 +1,7 @@
 use be_claude_code::legalize::legalize;
-use ctxrelay_ir::{Artifact, Block, BlockCaps, Document, Origin, Role, SourceProvenance, Turn, TurnId};
+use ctxrelay_ir::{
+    Artifact, Block, BlockCaps, Document, Origin, Role, SourceProvenance, Turn, TurnId,
+};
 use semver::Version;
 
 fn sample_document() -> Document {
@@ -19,7 +21,9 @@ fn sample_document() -> Document {
                     model: None,
                     surface: "claude.ai".to_string(),
                 },
-                blocks: vec![Block::Text { content: "你好".to_string() }],
+                blocks: vec![Block::Text {
+                    content: "你好".to_string(),
+                }],
                 timestamp: None,
             },
             Turn {
@@ -49,7 +53,9 @@ fn sample_document() -> Document {
                         false,
                         false,
                     ),
-                    Block::Text { content: "根据搜索结果...".to_string() },
+                    Block::Text {
+                        content: "根据搜索结果...".to_string(),
+                    },
                 ],
                 timestamp: None,
             },
@@ -69,7 +75,9 @@ fn inlines_reasoning_and_foreign_action_as_text() {
     assert_eq!(legalized.turns.len(), 3);
 
     match &legalized.turns[0].blocks[0] {
-        Block::Text { content } => assert!(content.contains("anthropic") && content.contains("claude.ai")),
+        Block::Text { content } => {
+            assert!(content.contains("anthropic") && content.contains("claude.ai"))
+        }
         other => panic!("expected preamble Text block, got {other:?}"),
     }
 

@@ -33,7 +33,9 @@ fn claude_code_can_resume_a_committed_session() {
     // 真实路径再计算 project slug,如果这里不 canonicalize,slug 就会算错、
     // `--resume` 会报 "No conversation found"。canonicalize 必须在 create_dir_all 之后
     // 才能生效(路径要先存在)。
-    let scratch_project = scratch_project.canonicalize().expect("canonicalize scratch project dir");
+    let scratch_project = scratch_project
+        .canonicalize()
+        .expect("canonicalize scratch project dir");
 
     let doc = Document {
         ir_version: Version::new(0, 1, 0),
@@ -50,7 +52,9 @@ fn claude_code_can_resume_a_committed_session() {
                 model: None,
                 surface: "claude.ai".to_string(),
             },
-            blocks: vec![Block::Text { content: format!("暗号是:{codeword}") }],
+            blocks: vec![Block::Text {
+                content: format!("暗号是:{codeword}"),
+            }],
             timestamp: None,
         }],
     };
@@ -76,7 +80,10 @@ fn claude_code_can_resume_a_committed_session() {
     commit(
         lowered,
         &dest,
-        TargetSpec { tool: "claude-code".to_string(), version_range: ">=2.1.0".to_string() },
+        TargetSpec {
+            tool: "claude-code".to_string(),
+            version_range: ">=2.1.0".to_string(),
+        },
         report,
         ir_digest,
     )
@@ -96,7 +103,9 @@ fn claude_code_can_resume_a_committed_session() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let parsed: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("expected JSON output from claude, got error {e}: {stdout}"));
-    let result_text = parsed["result"].as_str().expect("result field should be a string");
+    let result_text = parsed["result"]
+        .as_str()
+        .expect("result field should be a string");
 
     assert!(
         result_text.contains(codeword),

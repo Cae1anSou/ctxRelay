@@ -1,4 +1,6 @@
-use ctxrelay_backend::{BackendError, Dest, LoweredSession, LoweringReport, Manifest, Result, TargetSpec, WriteRecord};
+use ctxrelay_backend::{
+    BackendError, Dest, LoweredSession, LoweringReport, Manifest, Result, TargetSpec, WriteRecord,
+};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -25,7 +27,9 @@ pub fn commit(
         ))
     })?;
 
-    let path = dest.session_dir.join(format!("{}.jsonl", lowered.session_id));
+    let path = dest
+        .session_dir
+        .join(format!("{}.jsonl", lowered.session_id));
 
     if path.exists() {
         return Err(BackendError(format!(
@@ -49,7 +53,9 @@ pub fn commit(
     // 覆盖保护,而那条错误信息说的是"可能已经真实 commit 过",对一份写坏的垃圾
     // 文件来说是误导性的。`rename` 在同一文件系统内是原子的,要么最终看到的是
     // 完整内容,要么 `path` 根本不存在,不会有第三种状态。
-    let tmp_path = dest.session_dir.join(format!("{}.jsonl.tmp", lowered.session_id));
+    let tmp_path = dest
+        .session_dir
+        .join(format!("{}.jsonl.tmp", lowered.session_id));
     std::fs::write(&tmp_path, &buffer)
         .map_err(|e| BackendError(format!("failed to write {}: {e}", tmp_path.display())))?;
     std::fs::rename(&tmp_path, &path).map_err(|e| {
@@ -74,13 +80,27 @@ pub fn commit(
 }
 
 fn stamp_environment(line: &mut Value, session_id: &str, dest: &Dest) {
-    let obj = line.as_object_mut().expect("lower() always produces JSON objects");
-    obj.insert("sessionId".to_string(), Value::String(session_id.to_string()));
-    obj.insert("cwd".to_string(), Value::String(dest.cwd.display().to_string()));
-    obj.insert("version".to_string(), Value::String(dest.cli_version.clone()));
+    let obj = line
+        .as_object_mut()
+        .expect("lower() always produces JSON objects");
+    obj.insert(
+        "sessionId".to_string(),
+        Value::String(session_id.to_string()),
+    );
+    obj.insert(
+        "cwd".to_string(),
+        Value::String(dest.cwd.display().to_string()),
+    );
+    obj.insert(
+        "version".to_string(),
+        Value::String(dest.cli_version.clone()),
+    );
     obj.insert(
         "gitBranch".to_string(),
         Value::String(dest.git_branch.clone().unwrap_or_default()),
     );
-    obj.insert("userType".to_string(), Value::String("external".to_string()));
+    obj.insert(
+        "userType".to_string(),
+        Value::String("external".to_string()),
+    );
 }

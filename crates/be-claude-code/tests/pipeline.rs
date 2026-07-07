@@ -2,7 +2,9 @@ use be_claude_code::commit::commit;
 use be_claude_code::legalize::legalize;
 use be_claude_code::lower::lower;
 use ctxrelay_backend::{document_digest, Dest, TargetSpec};
-use ctxrelay_ir::{Artifact, Block, BlockCaps, Document, Origin, Role, SourceProvenance, Turn, TurnId};
+use ctxrelay_ir::{
+    Artifact, Block, BlockCaps, Document, Origin, Role, SourceProvenance, Turn, TurnId,
+};
 use semver::Version;
 use std::path::PathBuf;
 
@@ -23,7 +25,9 @@ fn sample_document() -> Document {
                     model: None,
                     surface: "claude.ai".to_string(),
                 },
-                blocks: vec![Block::Text { content: "你好".to_string() }],
+                blocks: vec![Block::Text {
+                    content: "你好".to_string(),
+                }],
                 timestamp: None,
             },
             Turn {
@@ -53,7 +57,9 @@ fn sample_document() -> Document {
                         false,
                         false,
                     ),
-                    Block::Text { content: "根据搜索结果...".to_string() },
+                    Block::Text {
+                        content: "根据搜索结果...".to_string(),
+                    },
                 ],
                 timestamp: None,
             },
@@ -94,7 +100,10 @@ fn legalize_lower_commit_thread_report_and_ir_digest_correctly() {
     let manifest = commit(
         lowered,
         &dest,
-        TargetSpec { tool: "claude-code".to_string(), version_range: ">=2.1.0".to_string() },
+        TargetSpec {
+            tool: "claude-code".to_string(),
+            version_range: ">=2.1.0".to_string(),
+        },
         report.clone(),
         ir_digest.clone(),
     )

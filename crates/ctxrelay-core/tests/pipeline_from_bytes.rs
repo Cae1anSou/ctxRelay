@@ -27,8 +27,8 @@ fn run_import_from_bytes_commits_a_live_capture() {
         cli_version: "2.1.201".to_string(),
     };
 
-    let manifest =
-        run_import_from_bytes(&registry, raw, "fe-claude-live", opts).expect("import should succeed");
+    let manifest = run_import_from_bytes(&registry, raw, "fe-claude-live", opts)
+        .expect("import should succeed");
 
     assert_eq!(manifest.writes.len(), 1);
     assert!(manifest.writes[0].path.exists());

@@ -1,4 +1,11 @@
-## ctxRelay
+# ctxRelay
+
+[![CI](https://github.com/Cae1anSou/ctxRelay/actions/workflows/ci.yml/badge.svg)](https://github.com/Cae1anSou/ctxRelay/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+> Import a web LLM conversation (currently claude.ai) into your local CLI agent's native session store, so you can `claude --resume` it and keep going — instead of copy-pasting the whole context back in. See `docs/architecture.md` for the full design rationale and architecture. Two acquisition paths are supported: a browser extension that captures the currently open, logged-in claude.ai tab (including thinking) and hands it straight to a local `ctxrelay listen` bridge, or a manual file import from a claude.ai share-link export (no extension required, but no thinking and no unshared conversations). Both paths converge on the same legalize → lower → commit pipeline and produce the same manifest, so `undo`/`verify` treat them identically.
+
+## 简介
 
 把 Web 端 LLM 对话(目前支持 claude.ai)导入本地 CLI agent 的原生会话存储,让你能直接用 `claude --resume` 接着聊,而不是把上下文复制粘贴一遍。完整设计动机和架构见 `docs/architecture.md`。
 
@@ -79,3 +86,11 @@ ctxrelay verify ./my-project/.ctxrelay/manifests/<session-id>.manifest.json
 浏览器扩展目前是面向作者自己用的 V1:工具栏图标的 badge 反馈只有几个简短代码,没有更友好的提示文案,也没有自动重置;`ctxrelay listen` 是一次性服务,处理完一次抓取就退出,如果要连续导入好几个对话,需要重新起一次 `listen`(重新起会换一个新 token,记得同步更新扩展设置页里的值)。
 
 `ctxrelay import`/`listen` 只在目标 backend 是 `claude-code` 时能自动发现该写到 `~/.claude/projects/` 下的哪个目录;这套发现逻辑目前是为 Claude Code 的目录规则量身定做的,还没有支持第二个 backend(比如 Codex)。
+
+### 贡献
+
+欢迎提 issue 和 PR。改动涉及 `crates/` 下任意 crate 时,提交前请本地跑一遍 `cargo fmt --all`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace`,CI 会跑同样的检查。改动涉及 `extension/` 时,对应跑 `pnpm run build`。
+
+### License
+
+[MIT](LICENSE)

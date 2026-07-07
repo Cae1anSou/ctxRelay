@@ -31,15 +31,24 @@ impl Registry {
     }
 
     pub fn find_acquire(&self, source: &SourceRef) -> Option<&dyn Acquire> {
-        self.acquirers.iter().find(|a| a.accepts(source)).map(|b| b.as_ref())
+        self.acquirers
+            .iter()
+            .find(|a| a.accepts(source))
+            .map(|b| b.as_ref())
     }
 
     pub fn find_parse(&self, frontend_id: &str) -> Option<&dyn Parse> {
-        self.parsers.iter().find(|p| p.id() == frontend_id).map(|b| b.as_ref())
+        self.parsers
+            .iter()
+            .find(|p| p.id() == frontend_id)
+            .map(|b| b.as_ref())
     }
 
     pub fn find_backend(&self, name: &str) -> Option<&dyn Backend> {
-        self.backends.iter().find(|b| b.target().tool == name).map(|b| b.as_ref())
+        self.backends
+            .iter()
+            .find(|b| b.target().tool == name)
+            .map(|b| b.as_ref())
     }
 }
 

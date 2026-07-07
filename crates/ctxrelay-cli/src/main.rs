@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
-use ctxrelay_core::{run_import, run_import_from_bytes, run_ir, run_undo, run_verify, ImportOptions, Registry};
+use ctxrelay_core::{
+    run_import, run_import_from_bytes, run_ir, run_undo, run_verify, ImportOptions, Registry,
+};
 use ctxrelay_frontend::SourceRef;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -72,14 +74,39 @@ fn main() -> ExitCode {
 
     let result = match cli.command {
         Command::Ir { input, output } => run_ir_command(&registry, input, output),
-        Command::Import { input, to, project, dry_run, bootstrap, manifest_out } => {
-            run_import_command(&registry, input, to, project, dry_run, bootstrap, manifest_out)
-        }
+        Command::Import {
+            input,
+            to,
+            project,
+            dry_run,
+            bootstrap,
+            manifest_out,
+        } => run_import_command(
+            &registry,
+            input,
+            to,
+            project,
+            dry_run,
+            bootstrap,
+            manifest_out,
+        ),
         Command::Undo { manifest } => run_undo_command(manifest),
         Command::Verify { manifest } => run_verify_command(manifest),
-        Command::Listen { to, project, port, manifest_out, bootstrap, claude_projects_root } => {
-            run_listen_command(to, project, port, manifest_out, bootstrap, claude_projects_root)
-        }
+        Command::Listen {
+            to,
+            project,
+            port,
+            manifest_out,
+            bootstrap,
+            claude_projects_root,
+        } => run_listen_command(
+            to,
+            project,
+            port,
+            manifest_out,
+            bootstrap,
+            claude_projects_root,
+        ),
     };
 
     match result {
@@ -123,8 +150,15 @@ fn run_import_command(
     let manifest = run_import(registry, SourceRef::File(input), opts).map_err(|e| e.to_string())?;
 
     let manifest_path = manifest_out.unwrap_or_else(|| {
-        let session_id = manifest.created_session_ids.first().cloned().unwrap_or_else(|| "unknown".to_string());
-        project.join(".ctxrelay").join("manifests").join(format!("{session_id}.manifest.json"))
+        let session_id = manifest
+            .created_session_ids
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "unknown".to_string());
+        project
+            .join(".ctxrelay")
+            .join("manifests")
+            .join(format!("{session_id}.manifest.json"))
     });
     if let Some(parent) = manifest_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -133,9 +167,17 @@ fn run_import_command(
     std::fs::write(&manifest_path, json).map_err(|e| e.to_string())?;
 
     if dry_run {
-        println!("dry-run: would write session {:?}, manifest saved to {}", manifest.created_session_ids, manifest_path.display());
+        println!(
+            "dry-run: would write session {:?}, manifest saved to {}",
+            manifest.created_session_ids,
+            manifest_path.display()
+        );
     } else {
-        println!("committed session {:?}, manifest saved to {}", manifest.created_session_ids, manifest_path.display());
+        println!(
+            "committed session {:?}, manifest saved to {}",
+            manifest.created_session_ids,
+            manifest_path.display()
+        );
     }
     Ok(())
 }
@@ -155,12 +197,16 @@ fn run_verify_command(manifest_path: PathBuf) -> Result<(), String> {
 }
 
 fn claude_projects_root() -> Result<PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
+    let home =
+        std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
     Ok(PathBuf::from(home).join(".claude/projects"))
 }
 
 fn detect_claude_version() -> Option<String> {
-    let output = std::process::Command::new("claude").arg("--version").output().ok()?;
+    let output = std::process::Command::new("claude")
+        .arg("--version")
+        .output()
+        .ok()?;
     if !output.status.success() {
         return None;
     }
@@ -202,7 +248,12 @@ fn run_listen_command(
     let header_token = request
         .headers()
         .iter()
-        .find(|h| h.field.as_str().as_str().eq_ignore_ascii_case("X-CtxRelay-Token"))
+        .find(|h| {
+            h.field
+                .as_str()
+                .as_str()
+                .eq_ignore_ascii_case("X-CtxRelay-Token")
+        })
         .map(|h| h.value.as_str().to_string());
 
     if header_token.as_deref() != Some(token.as_str()) {
@@ -248,9 +299,15 @@ fn run_listen_command(
     let (status_code, response_body, outcome) = match &result {
         Ok(manifest) => {
             let manifest_path = manifest_out.unwrap_or_else(|| {
-                let session_id =
-                    manifest.created_session_ids.first().cloned().unwrap_or_else(|| "unknown".to_string());
-                project.join(".ctxrelay").join("manifests").join(format!("{session_id}.manifest.json"))
+                let session_id = manifest
+                    .created_session_ids
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "unknown".to_string());
+                project
+                    .join(".ctxrelay")
+                    .join("manifests")
+                    .join(format!("{session_id}.manifest.json"))
             });
             if let Some(parent) = manifest_path.parent() {
                 let _ = std::fs::create_dir_all(parent);
@@ -269,7 +326,10 @@ fn run_listen_command(
         }
         Err(e) => (
             200,
-            format!(r#"{{"version":"1","status":"error","message":{:?}}}"#, e.to_string()),
+            format!(
+                r#"{{"version":"1","status":"error","message":{:?}}}"#,
+                e.to_string()
+            ),
             Err(e.to_string()),
         ),
     };

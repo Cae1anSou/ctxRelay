@@ -72,7 +72,9 @@ impl Parse for ClaudeShareParse {
                 let kind = block
                     .get("type")
                     .and_then(Value::as_str)
-                    .ok_or_else(|| FrontendError("content block missing \"type\" field".to_string()))?
+                    .ok_or_else(|| {
+                        FrontendError("content block missing \"type\" field".to_string())
+                    })?
                     .to_string();
 
                 match kind.as_str() {

@@ -1,5 +1,7 @@
 use ctxrelay_frontend::{FrontendError, Parse, RawBytes, Result};
-use ctxrelay_ir::{Artifact, Block, BlockCaps, Document, Origin, Role, SourceProvenance, Turn, TurnId};
+use ctxrelay_ir::{
+    Artifact, Block, BlockCaps, Document, Origin, Role, SourceProvenance, Turn, TurnId,
+};
 use semver::Version;
 use serde::Deserialize;
 use serde_json::Value;
@@ -41,8 +43,11 @@ impl Parse for ClaudeLiveParse {
         let snapshot: RawSnapshot = serde_json::from_slice(&raw)
             .map_err(|e| FrontendError(format!("invalid claude.ai live conversation JSON: {e}")))?;
 
-        let by_uuid: HashMap<&str, &RawMessage> =
-            snapshot.chat_messages.iter().map(|m| (m.uuid.as_str(), m)).collect();
+        let by_uuid: HashMap<&str, &RawMessage> = snapshot
+            .chat_messages
+            .iter()
+            .map(|m| (m.uuid.as_str(), m))
+            .collect();
 
         // 从 current_leaf_message_uuid 沿 parent_message_uuid 往回走,重建"当前被
         // 选中的那条线性分支"——tree=True 请求可能带回整棵树(含被放弃的重新生成
@@ -51,9 +56,9 @@ impl Parse for ClaudeLiveParse {
         let mut ordered: Vec<&RawMessage> = Vec::new();
         let mut cursor: &str = snapshot.current_leaf_message_uuid.as_str();
         while cursor != ROOT_SENTINEL {
-            let message = *by_uuid
-                .get(cursor)
-                .ok_or_else(|| FrontendError(format!("chat_messages missing referenced uuid {cursor:?}")))?;
+            let message = *by_uuid.get(cursor).ok_or_else(|| {
+                FrontendError(format!("chat_messages missing referenced uuid {cursor:?}"))
+            })?;
             ordered.push(message);
             cursor = message.parent_message_uuid.as_str();
         }
@@ -65,20 +70,24 @@ impl Parse for ClaudeLiveParse {
                 "human" => Role::User,
                 "assistant" => Role::Assistant,
                 other => {
-                    return Err(FrontendError(format!("unknown chat_messages[].sender value: {other:?}")))
+                    return Err(FrontendError(format!(
+                        "unknown chat_messages[].sender value: {other:?}"
+                    )))
                 }
             };
 
             let timestamp = OffsetDateTime::parse(&message.created_at, &Rfc3339).map_err(|e| {
-                FrontendError(format!("invalid created_at timestamp {:?}: {e}", message.created_at))
+                FrontendError(format!(
+                    "invalid created_at timestamp {:?}: {e}",
+                    message.created_at
+                ))
             })?;
 
             let mut blocks = Vec::with_capacity(message.content.len());
             for block in &message.content {
-                let kind = block
-                    .get("type")
-                    .and_then(Value::as_str)
-                    .ok_or_else(|| FrontendError("content block missing \"type\" field".to_string()))?;
+                let kind = block.get("type").and_then(Value::as_str).ok_or_else(|| {
+                    FrontendError("content block missing \"type\" field".to_string())
+                })?;
 
                 match kind {
                     "text" => {
@@ -87,7 +96,8 @@ impl Parse for ClaudeLiveParse {
                             .and_then(Value::as_str)
                             .ok_or_else(|| {
                                 FrontendError(
-                                    "content block has type=\"text\" but no \"text\" field".to_string(),
+                                    "content block has type=\"text\" but no \"text\" field"
+                                        .to_string(),
                                 )
                             })?
                             .to_string();
@@ -105,7 +115,11 @@ impl Parse for ClaudeLiveParse {
                             .to_string();
                         blocks.push(Block::Reasoning {
                             content,
-                            caps: BlockCaps { reasoning: true, verifiable_signature: false, replayable: false },
+                            caps: BlockCaps {
+                                reasoning: true,
+                                verifiable_signature: false,
+                                replayable: false,
+                            },
                         });
                     }
                     other => {
@@ -129,7 +143,11 @@ impl Parse for ClaudeLiveParse {
                 role,
                 origin: Origin {
                     vendor: "anthropic".to_string(),
-                    model: if message.sender == "assistant" { snapshot.model.clone() } else { None },
+                    model: if message.sender == "assistant" {
+                        snapshot.model.clone()
+                    } else {
+                        None
+                    },
                     surface: "claude.ai".to_string(),
                 },
                 blocks,
