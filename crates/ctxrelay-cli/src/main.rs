@@ -47,6 +47,10 @@ enum Command {
         port: u16,
         #[arg(long)]
         manifest_out: Option<PathBuf>,
+        /// 目标项目从未在 Claude Code 里打开过时,花一点真实 API 额度让 ctxrelay
+        /// 代为一次性初始化(见 `resolve_claude_code_dest` 的文档注释)
+        #[arg(long)]
+        bootstrap: bool,
         /// 仅测试用:覆盖 `~/.claude/projects` 的默认位置
         #[arg(long)]
         claude_projects_root: Option<PathBuf>,
@@ -64,8 +68,8 @@ fn main() -> ExitCode {
         }
         Command::Undo { manifest } => run_undo_command(manifest),
         Command::Verify { manifest } => run_verify_command(manifest),
-        Command::Listen { to, project, port, manifest_out, claude_projects_root } => {
-            run_listen_command(to, project, port, manifest_out, claude_projects_root)
+        Command::Listen { to, project, port, manifest_out, bootstrap, claude_projects_root } => {
+            run_listen_command(to, project, port, manifest_out, bootstrap, claude_projects_root)
         }
     };
 
@@ -163,6 +167,7 @@ fn run_listen_command(
     project: PathBuf,
     port: u16,
     manifest_out: Option<PathBuf>,
+    bootstrap: bool,
     claude_projects_root_override: Option<PathBuf>,
 ) -> Result<(), String> {
     let token = uuid::Uuid::new_v4().to_string();
@@ -223,7 +228,7 @@ fn run_listen_command(
         backend_name: to,
         project_dir: project.clone(),
         dry_run: false,
-        allow_bootstrap: false,
+        allow_bootstrap: bootstrap,
         claude_projects_root,
         cli_version,
     };
