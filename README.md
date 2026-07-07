@@ -17,8 +17,8 @@ cargo build --release -p ctxrelay-cli
 
 ```bash
 cd extension
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 然后在 Chrome 里打开 `chrome://extensions`,开启右上角的"开发者模式",点"加载已解压的扩展程序",选中 `extension/` 目录。
