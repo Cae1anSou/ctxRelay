@@ -49,8 +49,8 @@ fn capture_request_required_fields_appear_in_both_rust_and_typescript() {
     let schema: Value = serde_json::from_str(&schema_raw).expect("schema.json must be valid JSON");
 
     let rust_source = std::fs::read_to_string("src/bridge.rs").expect("src/bridge.rs must exist");
-    let ts_source = std::fs::read_to_string("../../extension/src/background.ts")
-        .expect("extension/src/background.ts must exist");
+    let ts_source = std::fs::read_to_string("../../extension/src/bridge.ts")
+        .expect("extension/src/bridge.ts must exist");
 
     assert_required_fields_appear_in_both(
         &schema,
@@ -58,7 +58,7 @@ fn capture_request_required_fields_appear_in_both_rust_and_typescript() {
         &rust_source,
         "crates/ctxrelay-cli/src/bridge.rs",
         &ts_source,
-        "extension/src/background.ts",
+        "extension/src/bridge.ts",
     );
 }
 
@@ -73,8 +73,8 @@ fn capture_response_required_fields_appear_in_both_rust_and_typescript() {
     let schema: Value = serde_json::from_str(&schema_raw).expect("schema.json must be valid JSON");
 
     let rust_source = std::fs::read_to_string("src/bridge.rs").expect("src/bridge.rs must exist");
-    let ts_source = std::fs::read_to_string("../../extension/src/background.ts")
-        .expect("extension/src/background.ts must exist");
+    let ts_source = std::fs::read_to_string("../../extension/src/bridge.ts")
+        .expect("extension/src/bridge.ts must exist");
 
     assert_required_fields_appear_in_both(
         &schema,
@@ -82,6 +82,6 @@ fn capture_response_required_fields_appear_in_both_rust_and_typescript() {
         &rust_source,
         "crates/ctxrelay-cli/src/bridge.rs",
         &ts_source,
-        "extension/src/background.ts",
+        "extension/src/bridge.ts",
     );
 }
