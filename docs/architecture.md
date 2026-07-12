@@ -311,11 +311,31 @@ ctxRelay/                       # 单仓库,前端插件与中后端全部在此
 
 ### 10.1 bridge-protocol:跨语言那道边界靠什么维持纪律
 
-`ctxrelay-cli` 和 `extension/background.ts` 是两个不同运行时、不同语言的进程,唯一的接触点是那个 `127.0.0.1` 本地 job 端点。这条边界如果只靠"两边约定好格式"心照不宣地维护,就是整个设计里唯一一处失去编译期保障、退化回口头约定的地方——这和 §6 那条"IR 是 frontend/backend 唯一沟通媒介"的原则在精神上是一回事,只是这次没有共享的类型系统能帮你兜底,所以必须显式补一层:
+`ctxrelay-cli` 和 `extension/`(插件)是两个不同运行时、不同语言的进程,唯一的接触点是 `ctxrelay listen` 起的那个 `127.0.0.1` 本地一次性端点。插件侧持有这份契约的代码具体落在 `extension/src/bridge.ts`(见 §10.2),不是 `background.ts`——后者只做按站点分发。这条边界如果只靠"两边约定好格式"心照不宣地维护,就是整个设计里唯一一处失去编译期保障、退化回口头约定的地方——这和 §6 那条"IR 是 frontend/backend 唯一沟通媒介"的原则在精神上是一回事,只是这次没有共享的类型系统能帮你兜底,所以必须显式补一层:
 
-- `bridge-protocol/schema.json` 是这条契约**唯一的权威来源**,定义 job 请求(`{version, job_id, token, target_url}`)和响应(`{version, job_id, status, body?}`)两个形状,带独立于 `ir_version` 的自己的版本号——它和 IR 是两条不同的 ABI,不要合并,job 协议的变化频率、原因都和 IR 无关。
-- **两侧的类型都从这一份 schema 生成,不手写两遍。** Rust 侧用 `typify` 之类的工具从 JSON Schema 生成 struct,TS 侧用 `json-schema-to-typescript` 生成 interface。手写两份等于把"两边会不会漂移"这件事又变回人肉盯着,而这恰恰是 IR 那一层拼命想避免的模式。
-- CI 里对两侧都跑一个"schema conformance"最小测试:Rust 侧序列化一个样例 job、TS 侧能反序列化并按同一 schema 校验通过,反向同理。这是编译器管不到时,能拿到的最接近编译期保障的东西。
+- `bridge-protocol/schema.json` 是这条契约**唯一的权威来源**,定义 `CaptureRequest`(插件 POST 给本地服务的请求体)和 `CaptureResponse`(处理结果)两个形状,带独立于 `ir_version` 的自己的版本号字段——它和 IR 是两条不同的 ABI,不要合并。
+- **`CaptureRequest` 只携带三类信息,不掺入任何具体应用的语义**:`token`(配对凭证)、`frontend_id`(路由键,必须等于 Rust 侧某个已注册 `Parse::id()`,例如 `"fe-claude-live"`——`ctxrelay listen` 收到请求后据此在 `Registry` 里查出对应的 `Parse` 实现,不再写死)、`snapshot`(不透明 payload,具体形状完全由 `frontend_id` 对应的 `Parse` 决定,桥本身不解释、也不应该解释其内容)。早期版本的 `CaptureRequest` 还带过 `conversation_id`/`org_id` 两个 Claude 专有字段——这两个字段除了在 Rust 侧反序列化之外从未被下游任何逻辑读取过,是纯粹的死字段,泛化契约时已删除;插件如果需要人类可读的调试标识,应该放进它自己拥有的 `snapshot` 内容里,不属于桥协议本身。
+- **两侧的类型都手写投影,严格照抄这份 schema。** V1 不引入 `typify`/`json-schema-to-typescript` 代码生成,靠 `crates/ctxrelay-cli/tests/bridge.rs` 里一条"反序列化插件会发出的样例 JSON"的测试,作为两边没有漂移的最小兜底验证——字段名/必需性任何一次不同步,这条测试会先炸。
+- `frontend_id` 这个路由键选在"和 Rust 侧 `Parse::id()` 完全相同的字符串"上,不是巧合:这样插件侧新增一个抓取源时,只需要知道"我对应哪个已经注册好的 Rust frontend",不需要发明一套独立的应用标识体系。见 §10.2。
+
+### 10.2 插件侧的职责边界:只做"抓取",不做"解释"
+
+`extension/` 是 §2 narrow waist 图里 frontend 侧的一部分,但它天生没法直接实现 `crates/ctxrelay-frontend` 里的 `Acquire`/`Parse` trait——那是 Rust 类型,插件是另一个语言、另一个进程。它实际扮演的角色是 `Acquire` 语义的一个跨语言实现:**只负责"认出这是哪个应用的页面 + 用该应用私有的、需要认证态的方式把原始数据弄到手",不负责解释数据内容**。解释内容(把厂商专有 JSON 结构 lower 成中立 IR)永远是 Rust 侧对应 `frontend_id` 的 `Parse` 实现的职责,不允许下沉到插件里——原因很直接:`fe-claude-share` 这条路径(账号导出/分享快照)完全不经过插件,如果解析逻辑被分到插件里一份,就必须在 TS 和 Rust 两边各维护一份,或者被迫让所有导入路径都绕道插件,两者都违反 §2 的解耦初衷。
+
+这条边界落到插件内部结构上,是一个"抓取源(`CaptureSource`)注册表"模式,直接镜像 Rust 侧 `ctxrelay-core::Registry` 按 `id()` 匹配的做法:
+
+```
+extension/src/
+├── sources/
+│   ├── types.ts        # CaptureSource 接口:frontendId + matches(url) + capture(url)
+│   ├── claude-live.ts   # claude.ai 的实现,frontendId = "fe-claude-live"
+│   └── registry.ts      # SOURCES 数组 + resolveSource(url),新增站点只加一行
+├── bridge.ts             # 通用的"打包成 CaptureRequest + POST + 设 badge",不认识任何具体应用
+├── background.ts         # 入口:按 URL 从 registry 里选出抓取源,拿到 snapshot 后交给 bridge.ts
+└── options.ts             # 不变
+```
+
+新增一个应用(例如 ChatGPT)的代价被压缩成:在 `sources/` 下新增一个实现 `CaptureSource` 的文件(内容是该应用私有 API 的实测结果,方法上参照 `fe-claude-live` 当初的实测流程,不能凭猜测编写)、在 `registry.ts` 的 `SOURCES` 数组里加一行、在 Rust 侧对称地新增一个 `fe-<app>-live` crate 实现 `Parse` 并注册进 `ctxrelay-core::Registry`。两侧都不需要改 `bridge-protocol/schema.json`,也不需要改 `background.ts`/`bridge.ts`——这正是这条边界要保护的东西。
 
 ### 插件化(为 N/M 增长预留)
 - v0:编译期注册表 + trait object,足够。
