@@ -311,7 +311,7 @@ ctxRelay/                       # 单仓库,前端插件与中后端全部在此
 
 ### 10.1 bridge-protocol:跨语言那道边界靠什么维持纪律
 
-`ctxrelay-cli` 和 `extension/background.ts` 是两个不同运行时、不同语言的进程,唯一的接触点是 `ctxrelay listen` 起的那个 `127.0.0.1` 本地一次性端点。这条边界如果只靠"两边约定好格式"心照不宣地维护,就是整个设计里唯一一处失去编译期保障、退化回口头约定的地方——这和 §6 那条"IR 是 frontend/backend 唯一沟通媒介"的原则在精神上是一回事,只是这次没有共享的类型系统能帮你兜底,所以必须显式补一层:
+`ctxrelay-cli` 和 `extension/`(插件)是两个不同运行时、不同语言的进程,唯一的接触点是 `ctxrelay listen` 起的那个 `127.0.0.1` 本地一次性端点。插件侧持有这份契约的代码具体落在 `extension/src/bridge.ts`(见 §10.2),不是 `background.ts`——后者只做按站点分发。这条边界如果只靠"两边约定好格式"心照不宣地维护,就是整个设计里唯一一处失去编译期保障、退化回口头约定的地方——这和 §6 那条"IR 是 frontend/backend 唯一沟通媒介"的原则在精神上是一回事,只是这次没有共享的类型系统能帮你兜底,所以必须显式补一层:
 
 - `bridge-protocol/schema.json` 是这条契约**唯一的权威来源**,定义 `CaptureRequest`(插件 POST 给本地服务的请求体)和 `CaptureResponse`(处理结果)两个形状,带独立于 `ir_version` 的自己的版本号字段——它和 IR 是两条不同的 ABI,不要合并。
 - **`CaptureRequest` 只携带三类信息,不掺入任何具体应用的语义**:`token`(配对凭证)、`frontend_id`(路由键,必须等于 Rust 侧某个已注册 `Parse::id()`,例如 `"fe-claude-live"`——`ctxrelay listen` 收到请求后据此在 `Registry` 里查出对应的 `Parse` 实现,不再写死)、`snapshot`(不透明 payload,具体形状完全由 `frontend_id` 对应的 `Parse` 决定,桥本身不解释、也不应该解释其内容)。早期版本的 `CaptureRequest` 还带过 `conversation_id`/`org_id` 两个 Claude 专有字段——这两个字段除了在 Rust 侧反序列化之外从未被下游任何逻辑读取过,是纯粹的死字段,泛化契约时已删除;插件如果需要人类可读的调试标识,应该放进它自己拥有的 `snapshot` 内容里,不属于桥协议本身。
