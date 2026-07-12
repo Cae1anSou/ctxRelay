@@ -99,7 +99,7 @@ fn listen_accepts_one_capture_and_exits() {
         std::fs::read_to_string("../fe-claude-live/tests/fixtures/sample_live_conversation.json")
             .unwrap();
     let capture_request = format!(
-        r#"{{"version":"1","token":"{token}","conversation_id":"fca79960-3026-40e1-beba-6abb33fe20d5","org_id":"ed9a9a3c-9d81-43a0-b974-3aa686e20a87","snapshot":{snapshot}}}"#
+        r#"{{"version":"1","token":"{token}","frontend_id":"fe-claude-live","snapshot":{snapshot}}}"#
     );
 
     let (status, body) = post_capture(47899, &token, &capture_request);
@@ -140,7 +140,7 @@ fn listen_rejects_wrong_token() {
     let (status, _body) = post_capture(
         47900,
         "wrong-token",
-        r#"{"version":"1","token":"wrong-token","conversation_id":"x","org_id":"y","snapshot":{}}"#,
+        r#"{"version":"1","token":"wrong-token","frontend_id":"fe-claude-live","snapshot":{}}"#,
     );
     assert_eq!(status, 401);
 
@@ -240,7 +240,7 @@ fn listen_returns_non_2xx_when_import_pipeline_fails() {
         std::fs::read_to_string("../fe-claude-live/tests/fixtures/sample_live_conversation.json")
             .unwrap();
     let capture_request = format!(
-        r#"{{"version":"1","token":"{token}","conversation_id":"fca79960-3026-40e1-beba-6abb33fe20d5","org_id":"ed9a9a3c-9d81-43a0-b974-3aa686e20a87","snapshot":{snapshot}}}"#
+        r#"{{"version":"1","token":"{token}","frontend_id":"fe-claude-live","snapshot":{snapshot}}}"#
     );
 
     let (status, body) = post_capture(47902, &token, &capture_request);

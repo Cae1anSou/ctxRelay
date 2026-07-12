@@ -3,12 +3,15 @@ use serde::{Deserialize, Serialize};
 /// 对应 `bridge-protocol/schema.json` 的 `CaptureRequest`——字段名/必需性必须和
 /// schema 保持一致,这份 schema 才是两侧契约的唯一权威来源,这里只是它在 Rust 里
 /// 的一份手写投影。
+///
+/// `frontend_id` 是 Rust 侧 `Registry::find_parse` 用的路由键,必须等于某个已注册
+/// frontend crate 的 `Parse::id()`(例如 `"fe-claude-live"`)——桥本身不认识任何
+/// 具体应用,只按这个字符串转发,具体应用是谁由发请求的插件决定。
 #[derive(Debug, Deserialize)]
 pub struct CaptureRequest {
     pub version: String,
     pub token: String,
-    pub conversation_id: String,
-    pub org_id: String,
+    pub frontend_id: String,
     #[serde(default)]
     pub captured_at: Option<String>,
     pub snapshot: serde_json::Value,

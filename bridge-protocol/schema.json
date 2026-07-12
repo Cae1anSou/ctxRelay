@@ -4,16 +4,15 @@
   "description": "CLI(ctxrelay listen)与浏览器扩展(background.ts)之间唯一的契约来源。两侧的类型都应该照着这份 schema 手写/生成,不允许字段名各写各的。",
   "definitions": {
     "CaptureRequest": {
-      "description": "扩展 POST 给本地 ctxrelay listen 服务的请求体。",
+      "description": "插件 POST 给本地 ctxrelay listen 服务的请求体。",
       "type": "object",
-      "required": ["version", "token", "conversation_id", "org_id", "snapshot"],
+      "required": ["version", "token", "frontend_id", "snapshot"],
       "properties": {
         "version": { "type": "string", "const": "1" },
-        "token": { "type": "string", "description": "ctxrelay listen 启动时打印的一次性 token,用户手动粘贴进扩展设置页配对。" },
-        "conversation_id": { "type": "string" },
-        "org_id": { "type": "string" },
-        "captured_at": { "type": "string", "description": "RFC3339 时间戳,扩展抓取时的本地时间,仅供人读,不参与 IR。" },
-        "snapshot": { "type": "object", "description": "claude.ai chat_conversations 接口的原始 JSON,原样透传给 fe-claude-live::ClaudeLiveParse。" }
+        "token": { "type": "string", "description": "ctxrelay listen 启动时打印的一次性 token,用户手动粘贴进插件设置页配对。" },
+        "frontend_id": { "type": "string", "description": "路由键,必须等于 Rust 侧某个已注册 frontend crate 的 Parse::id(),例如 \"fe-claude-live\"。ctxrelay listen 据此在 Registry 里查出对应的 Parse 实现,不再写死。" },
+        "captured_at": { "type": "string", "description": "RFC3339 时间戳,插件抓取时的本地时间,仅供人读,不参与 IR。" },
+        "snapshot": { "type": "object", "description": "不透明的原始 payload,具体形状完全由 frontend_id 对应的 Parse 实现决定,schema 本身不解释其内容。" }
       }
     },
     "CaptureResponse": {

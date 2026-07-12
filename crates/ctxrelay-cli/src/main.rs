@@ -330,7 +330,7 @@ fn run_listen_command(
     };
 
     let raw = serde_json::to_vec(&capture.snapshot).map_err(|e| e.to_string())?;
-    let result = run_import_from_bytes(&registry, raw, "fe-claude-live", opts);
+    let result = run_import_from_bytes(&registry, raw, &capture.frontend_id, opts);
 
     let (status_code, response_body, outcome) = match &result {
         Ok(manifest) => {
