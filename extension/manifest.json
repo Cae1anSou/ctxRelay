@@ -7,7 +7,8 @@
     "default_title": "导入到 ctxRelay"
   },
   "background": {
-    "service_worker": "dist/background.js"
+    "service_worker": "dist/background.js",
+    "type": "module"
   },
   "options_page": "options.html",
   "permissions": ["activeTab", "storage"],
