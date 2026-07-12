@@ -35,17 +35,24 @@ fn role_str(role: Role) -> &'static str {
     }
 }
 
-fn block_to_text(block: &Block) -> String {
+fn block_to_text(block: &Block) -> ctxrelay_backend::Result<String> {
     match block {
-        Block::Text { content } => content.clone(),
-        Block::Code { language, content } => match language {
+        Block::Text { content } => Ok(content.clone()),
+        Block::Code { language, content } => Ok(match language {
             Some(lang) => format!("```{lang}\n{content}\n```"),
             None => format!("```\n{content}\n```"),
-        },
+        }),
         // legalize 已经把 Reasoning/ForeignAction 都内联成 Text,lower 不应该再见到
-        // 它们;如果真的见到了,说明调用方跳过了 legalize,这是编程错误而不是数据问题,
-        // 直接 panic 比静默生成一个内容缺失的会话更安全。
-        other => panic!("lower() received un-legalized block: {other:?}"),
+        // 它们;如果真的见到了,说明调用方跳过了 legalize,这是编程错误而不是数据问题。
+        // 曾经这里直接 panic!——但 `lower` 的签名本就声明了 `Result`,调用方
+        // (`ctxrelay-core::commit_document`)已经在用 `?` 传播它的错误,让这类
+        // "调用顺序被打破"的问题走同一条 `Result` 路径,好过让它成为唯一一个绕开
+        // 错误处理、直接崩掉进程的分支——尤其是 `ctxrelay listen` 场景下,裸 panic
+        // 会导致 HTTP 响应从未发出,复现的正是这次要修的"扩展显示 N/L 而非真实错误"
+        // 那类问题。
+        other => Err(BackendError(format!(
+            "lower() received un-legalized block: {other:?}"
+        ))),
     }
 }
 
@@ -68,8 +75,8 @@ pub fn lower(doc: &Document) -> ctxrelay_backend::Result<LoweredSession> {
         let content: Vec<Value> = turn
             .blocks
             .iter()
-            .map(|b| json!({ "type": "text", "text": block_to_text(b) }))
-            .collect();
+            .map(|b| block_to_text(b).map(|text| json!({ "type": "text", "text": text })))
+            .collect::<ctxrelay_backend::Result<Vec<Value>>>()?;
 
         // `OffsetDateTime::format` 在年份超出 -9999..=9999 时会真的返回 Err——罕见但
         // 不是不可能,既然函数签名已经声明了 Result,这里就该老实传播而不是 panic。

@@ -213,6 +213,23 @@ fn detect_claude_version() -> Option<String> {
     Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+/// 常量时间字符串比较,防的是本机时序攻击(用响应时间差猜 token 字节)——本地
+/// 单用户场景下这个威胁模型的实际价值很低,但 token 是这条本地服务唯一的准入
+/// 门槛,能顺手做对就不该图省事用短路 `==`。长度不等时直接返回 false 之前先做
+/// 一次固定成本的比较,避免因为长度提前分支而泄漏长度信息。
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    let len_matches = a.len() == b.len();
+    let max_len = a.len().max(b.len());
+    let mut diff: u8 = if len_matches { 0 } else { 1 };
+    for i in 0..max_len {
+        let byte_a = a.get(i).copied().unwrap_or(0);
+        let byte_b = b.get(i).copied().unwrap_or(0);
+        diff |= byte_a ^ byte_b;
+    }
+    diff == 0
+}
+
 /// 一次性本地 HTTP 服务:起服务、打印 token、等浏览器扩展 POST 一次抓取、校验
 /// token、跑完整个 import 管线、写 manifest、响应、退出。刻意不做成常驻服务——
 /// 只处理一个请求就退出,避免引入一个长期占用端口、需要额外生命周期管理的后台
@@ -256,21 +273,40 @@ fn run_listen_command(
         })
         .map(|h| h.value.as_str().to_string());
 
-    if header_token.as_deref() != Some(token.as_str()) {
+    if !header_token
+        .as_deref()
+        .is_some_and(|h| constant_time_eq(h, &token))
+    {
         let response = tiny_http::Response::from_string(
-            r#"{"version":"1","status":"error","message":"invalid token"}"#,
+            ctxrelay_cli::bridge::CaptureResponse::error("invalid token").to_json(),
         )
         .with_status_code(401);
         let _ = request.respond(response);
         return Err("received request with invalid token".to_string());
     }
 
-    let capture: ctxrelay_cli::bridge::CaptureRequest =
-        serde_json::from_str(&body).map_err(|e| format!("invalid CaptureRequest JSON: {e}"))?;
+    // 请求体不合 schema(比如 TS/Rust 两侧字段手写投影哪天漂移了)是一个真实存在
+    // 的、预期内会发生的失败模式,不是"不可能到达"的编程错误——之前这里用 `?`
+    // 直接把错误甩给 `main()`,响应从未发出,扩展侧的 `fetch` 会因为连接被复位而
+    // 抛异常,badge 显示成 `N/L`("没连上本地服务"),这个反馈跟真实原因(连上了、
+    // 解析崩了)完全对不上,会把用户导向错误的排查方向(去查端口/token,而不是
+    // 去查两侧协议是否漂移)。显式捕获、回一个 400,让扩展至少能读到 `status`。
+    let capture: ctxrelay_cli::bridge::CaptureRequest = match serde_json::from_str(&body) {
+        Ok(capture) => capture,
+        Err(e) => {
+            let message = format!("invalid CaptureRequest JSON: {e}");
+            let response = tiny_http::Response::from_string(
+                ctxrelay_cli::bridge::CaptureResponse::error(&message).to_json(),
+            )
+            .with_status_code(400);
+            let _ = request.respond(response);
+            return Err(message);
+        }
+    };
 
-    if capture.token != token {
+    if !constant_time_eq(&capture.token, &token) {
         let response = tiny_http::Response::from_string(
-            r#"{"version":"1","status":"error","message":"invalid token"}"#,
+            ctxrelay_cli::bridge::CaptureResponse::error("invalid token").to_json(),
         )
         .with_status_code(401);
         let _ = request.respond(response);
@@ -316,7 +352,7 @@ fn run_listen_command(
             let _ = std::fs::write(&manifest_path, json);
             (
                 200,
-                r#"{"version":"1","status":"ok"}"#.to_string(),
+                ctxrelay_cli::bridge::CaptureResponse::ok().to_json(),
                 Ok(format!(
                     "committed session {:?}, manifest saved to {}",
                     manifest.created_session_ids,
@@ -324,12 +360,15 @@ fn run_listen_command(
                 )),
             )
         }
+        // 之前这里硬编码 200——HTTP 状态码是唯一一个扩展侧不用解析 body 就能看到
+        // 的信号,`background.ts` 也确实只看 `res.ok`。回 200 意味着不管管线是不是
+        // 真的崩了(比如项目没 bootstrap、backend 报错),扩展工具栏一律显示 `OK`,
+        // 用户会以为导入成功,实际上什么都没写进去——这正是架构文档 §1 明确要杜绝
+        // 的"静默失败",而且是两端各自的测试都不会报出来的那种。真实失败必须回一个
+        // 非 2xx 状态码。
         Err(e) => (
-            200,
-            format!(
-                r#"{{"version":"1","status":"error","message":{:?}}}"#,
-                e.to_string()
-            ),
+            500,
+            ctxrelay_cli::bridge::CaptureResponse::error(e.to_string()).to_json(),
             Err(e.to_string()),
         ),
     };

@@ -90,7 +90,9 @@ fn commit_document(registry: &Registry, doc: Document, opts: ImportOptions) -> R
         ))
     })?;
 
-    let (legalized, report) = backend.legalize(&doc);
+    let (legalized, report) = backend
+        .legalize(&doc)
+        .map_err(|e| CoreError(e.to_string()))?;
     let lowered = backend
         .lower(&legalized)
         .map_err(|e| CoreError(e.to_string()))?;

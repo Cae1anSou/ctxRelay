@@ -148,3 +148,112 @@ fn listen_rejects_wrong_token() {
     child.wait().ok();
     std::fs::remove_dir_all(&project_dir).ok();
 }
+
+/// 回归测试:曾经请求体反序列化失败时,`listen` 会直接用 `?` 把错误甩给
+/// `main()`,`request.respond()` 从未被调用,TCP 连接被复位而不是收到一个明确的
+/// 400。扩展侧的 `fetch` 在这种情况下会抛异常,badge 显示成 `N/L`(“没连上本地
+/// 服务”)——但真实原因是“连上了,body 解析崩了”,会把用户导向错误的排查方向。
+#[test]
+fn listen_returns_400_on_malformed_json_body() {
+    let project_dir = std::env::temp_dir().join("ctxrelay-cli-listen-malformed-project");
+    let _ = std::fs::remove_dir_all(&project_dir);
+    std::fs::create_dir_all(&project_dir).unwrap();
+
+    let mut child = Command::new(ctxrelay_bin())
+        .arg("listen")
+        .arg("--to")
+        .arg("claude-code")
+        .arg("--project")
+        .arg(&project_dir)
+        .arg("--port")
+        .arg("47901")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn ctxrelay listen");
+
+    let stdout = child.stdout.take().unwrap();
+    let mut reader = std::io::BufReader::new(stdout);
+    let mut first_line = String::new();
+    std::io::BufRead::read_line(&mut reader, &mut first_line).unwrap();
+    let token = first_line
+        .split("token: ")
+        .nth(1)
+        .map(|s| s.trim().to_string())
+        .expect("listen should print a token line");
+
+    let (status, body) = post_capture(47901, &token, "{not valid json");
+    assert_eq!(status, 400, "response body: {body}");
+    assert!(
+        body.contains("\"status\":\"error\""),
+        "response body: {body}"
+    );
+
+    child.wait().ok();
+    std::fs::remove_dir_all(&project_dir).ok();
+}
+
+/// 回归测试:曾经不管管线是否真的失败,`listen` 一律回 HTTP 200,只在 body 里把
+/// `status` 标成 `"error"`——而扩展侧只看 `res.ok`,于是导入管线报错时工具栏仍然
+/// 显示 `OK`,用户会以为导入成功。这里用一个未 bootstrap 过的目标目录触发一次
+/// 真实的管线失败(`resolve_claude_code_dest` 找不到对应 session 目录、且未传
+/// `--bootstrap`),断言响应状态码不是 2xx。
+#[test]
+fn listen_returns_non_2xx_when_import_pipeline_fails() {
+    let project_dir = std::env::temp_dir().join("ctxrelay-cli-listen-pipeline-fail-project");
+    let _ = std::fs::remove_dir_all(&project_dir);
+    std::fs::create_dir_all(&project_dir).unwrap();
+
+    // 特意不预先在 projects_root 下建对应 slug 目录,且不传 --bootstrap——
+    // `resolve_claude_code_dest` 应该会报错,而不是意外成功。
+    let projects_root =
+        std::env::temp_dir().join("ctxrelay-cli-listen-pipeline-fail-projects-root");
+    let _ = std::fs::remove_dir_all(&projects_root);
+    std::fs::create_dir_all(&projects_root).unwrap();
+
+    let mut child = Command::new(ctxrelay_bin())
+        .arg("listen")
+        .arg("--to")
+        .arg("claude-code")
+        .arg("--project")
+        .arg(&project_dir)
+        .arg("--port")
+        .arg("47902")
+        .arg("--claude-projects-root")
+        .arg(&projects_root)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn ctxrelay listen");
+
+    let stdout = child.stdout.take().unwrap();
+    let mut reader = std::io::BufReader::new(stdout);
+    let mut first_line = String::new();
+    std::io::BufRead::read_line(&mut reader, &mut first_line).unwrap();
+    let token = first_line
+        .split("token: ")
+        .nth(1)
+        .map(|s| s.trim().to_string())
+        .expect("listen should print a token line");
+
+    let snapshot =
+        std::fs::read_to_string("../fe-claude-live/tests/fixtures/sample_live_conversation.json")
+            .unwrap();
+    let capture_request = format!(
+        r#"{{"version":"1","token":"{token}","conversation_id":"fca79960-3026-40e1-beba-6abb33fe20d5","org_id":"ed9a9a3c-9d81-43a0-b974-3aa686e20a87","snapshot":{snapshot}}}"#
+    );
+
+    let (status, body) = post_capture(47902, &token, &capture_request);
+    assert!(
+        !(200..300).contains(&status),
+        "expected a non-2xx status for a failed import, got {status}, body: {body}"
+    );
+    assert!(
+        body.contains("\"status\":\"error\""),
+        "response body: {body}"
+    );
+
+    child.wait().ok();
+    std::fs::remove_dir_all(&project_dir).ok();
+    std::fs::remove_dir_all(&projects_root).ok();
+}

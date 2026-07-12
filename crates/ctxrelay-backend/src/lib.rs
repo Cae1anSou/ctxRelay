@@ -122,7 +122,7 @@ pub type Result<T> = std::result::Result<T, BackendError>;
 pub trait Backend {
     fn target(&self) -> TargetSpec;
     fn required_caps(&self) -> CapPolicy;
-    fn legalize(&self, doc: &Document) -> (Document, LoweringReport);
+    fn legalize(&self, doc: &Document) -> Result<(Document, LoweringReport)>;
     fn lower(&self, doc: &Document) -> Result<LoweredSession>;
     fn commit(
         &self,

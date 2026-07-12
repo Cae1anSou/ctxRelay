@@ -66,7 +66,7 @@ fn sample_document() -> Document {
 #[test]
 fn inlines_reasoning_and_foreign_action_as_text() {
     let doc = sample_document();
-    let (legalized, report) = legalize(&doc);
+    let (legalized, report) = legalize(&doc).expect("legalize should succeed");
 
     assert_eq!(report.inlined_reasoning, 1);
     assert_eq!(report.inlined_foreign_actions, 1);
@@ -107,4 +107,42 @@ fn inlines_reasoning_and_foreign_action_as_text() {
         Block::Text { content } => assert_eq!(content, "根据搜索结果..."),
         other => panic!("expected Text block, got {other:?}"),
     }
+}
+
+/// `caps.verifiable_signature: true` 是 IR 类型系统合法、property test 也会生成的
+/// 取值组合(目前没有 frontend 产出它,但 legalize 不能假设"永远不会收到")。这里
+/// 曾经是直接 `panic!`——crash 整个 `ctxrelay import` 进程,而不是像其他不支持的
+/// 输入一样走 `Result::Err` 由 CLI 顶层正常报错退出。这条测试锁定"不支持的输入
+/// 走错误路径,不是裸崩"这个行为。
+#[test]
+fn rejects_verifiable_signature_with_error_instead_of_panicking() {
+    let doc = Document {
+        ir_version: Version::new(0, 1, 0),
+        source: SourceProvenance {
+            vendor: "anthropic".to_string(),
+            surface: "claude.ai".to_string(),
+            exported_at: None,
+        },
+        turns: vec![Turn {
+            id: TurnId("t1".to_string()),
+            role: Role::Assistant,
+            origin: Origin {
+                vendor: "anthropic".to_string(),
+                model: Some("opus-4".to_string()),
+                surface: "claude.ai".to_string(),
+            },
+            blocks: vec![Block::Reasoning {
+                content: "带真实签名的思考".to_string(),
+                caps: BlockCaps {
+                    reasoning: true,
+                    verifiable_signature: true,
+                    replayable: false,
+                },
+            }],
+            timestamp: None,
+        }],
+    };
+
+    let result = legalize(&doc);
+    assert!(result.is_err());
 }

@@ -33,7 +33,7 @@ impl Backend for ClaudeCodeBackend {
         }
     }
 
-    fn legalize(&self, doc: &Document) -> (Document, LoweringReport) {
+    fn legalize(&self, doc: &Document) -> Result<(Document, LoweringReport)> {
         legalize::legalize(doc)
     }
 

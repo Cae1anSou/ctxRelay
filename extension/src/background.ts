@@ -7,6 +7,12 @@ interface CaptureRequest {
   snapshot: unknown;
 }
 
+interface CaptureResponse {
+  version: "1";
+  status: "ok" | "error";
+  message?: string;
+}
+
 interface Organization {
   uuid: string;
 }
@@ -86,7 +92,21 @@ async function captureAndSend(tabId: number, tabUrl: string): Promise<void> {
       headers: { "Content-Type": "application/json", "X-CtxRelay-Token": token },
       body: JSON.stringify(captureRequest),
     });
-    await chrome.action.setBadgeText({ text: postRes.ok ? "OK" : "ERR", tabId });
+    // 只看 `postRes.ok` 曾经是个 bug:`ctxrelay listen` 以前不管管线是否真的成功
+    // 都回 HTTP 200,只在 body 里把 `status` 标成 `"error"`——所以这里必须解析
+    // body、看 `status` 字段,而不是只信 HTTP 状态码。服务端现在已经改成失败回
+    // 非 2xx 了,但两条信号都查一遍(`postRes.ok` 且 `status === "ok"`)才算真正
+    // 对齐 bridge-protocol 的契约,不会因为以后哪边单独改回去又变成静默失败。
+    let succeeded = false;
+    try {
+      const responseBody = (await postRes.json()) as CaptureResponse;
+      succeeded = postRes.ok && responseBody.status === "ok";
+    } catch {
+      // 响应体不是合法 JSON,理论上不该发生,但别让"解析响应体"本身变成又一个
+      // 没人处理的异常——退化成只看 HTTP 状态码。
+      succeeded = postRes.ok;
+    }
+    await chrome.action.setBadgeText({ text: succeeded ? "OK" : "ERR", tabId });
   } catch {
     // ctxrelay listen 大概率还没起,或者端口不对——用户需要先在终端跑 listen。
     await chrome.action.setBadgeText({ text: "N/L", tabId });

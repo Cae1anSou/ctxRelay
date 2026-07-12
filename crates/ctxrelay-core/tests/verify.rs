@@ -84,7 +84,7 @@ fn run_verify_gets_a_real_response_from_claude() {
 
     let ir_digest = document_digest(&doc);
     let backend = ClaudeCodeBackend;
-    let (legalized, report) = legalize(&doc);
+    let (legalized, report) = legalize(&doc).expect("legalize should succeed");
     let lowered = lower(&legalized).expect("lower should succeed");
 
     let home = std::env::var("HOME").expect("HOME must be set");

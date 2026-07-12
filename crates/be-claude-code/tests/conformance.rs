@@ -60,7 +60,7 @@ fn claude_code_can_resume_a_committed_session() {
     };
 
     let ir_digest = ctxrelay_backend::document_digest(&doc);
-    let (legalized, report) = legalize(&doc);
+    let (legalized, report) = legalize(&doc).expect("legalize should succeed");
     let lowered = lower(&legalized).expect("lower should succeed");
     let session_id = lowered.session_id.clone();
 

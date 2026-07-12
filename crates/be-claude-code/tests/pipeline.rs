@@ -80,7 +80,7 @@ fn legalize_lower_commit_thread_report_and_ir_digest_correctly() {
     let doc = sample_document();
     let ir_digest = document_digest(&doc);
 
-    let (legalized, report) = legalize(&doc);
+    let (legalized, report) = legalize(&doc).expect("legalize should succeed");
     assert_eq!(report.inlined_reasoning, 1);
     assert_eq!(report.inlined_foreign_actions, 1);
 

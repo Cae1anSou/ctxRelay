@@ -14,3 +14,4 @@ time = { version = "0.3", features = ["formatting", "parsing"] }
 
 [dev-dependencies]
 semver = "1"
+proptest = "1"

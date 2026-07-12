@@ -90,8 +90,16 @@ fn arb_document() -> impl Strategy<Value = Document> {
 }
 
 proptest! {
+    /// 注意这条测试的真实范围比名字听起来的要窄:它只验证 `Document` 自身的
+    /// serde 序列化往返(`to_string` → `from_str`)是无损的,不涉及任何 backend
+    /// 的 `lower()`。架构文档 §9 承诺的"任意合法 IR 经 `lower → parse` 往返后
+    /// content-effect 守恒"目前无法在这里验证——因为不存在任何"claude-code 原生
+    /// 格式 → IR"的反向 parser,`lower` 目前是单向的。真正经过 `lower()` 的
+    /// content-effect 保真由 `be-claude-code` 的
+    /// `content_preservation::lower_preserves_every_block_content` 覆盖(见该测试的
+    /// 文档注释,说明了它相对"完整 lower→parse 往返"这个更强承诺的边界)。
     #[test]
-    fn roundtrip_preserves_content_effect(doc in arb_document()) {
+    fn serde_roundtrip_preserves_document_equality(doc in arb_document()) {
         let json = serde_json::to_string(&doc).expect("serialize");
         let parsed: Document = serde_json::from_str(&json).expect("deserialize");
         prop_assert_eq!(doc, parsed);
